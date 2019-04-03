@@ -46,10 +46,6 @@ dtest=all$dtest
 ```
 
 **Q1**: Would you choose `price` or `logprice` as response variable? Justify your choice. Next, plot your choice of response pairwise with `carat`, `logcarat`, `color`, `clarity` and `cut`. Comment.
-
-log kanskje best siden boxcox er nærmere 1 for det. hvis boxcox er nærme 1 er den fornøyd.
-vil heller ikke se noe mønster i residualplottet, og vi ser mindre mønster for logprice en for price. 
-vil derfor velge logprice. 
 ```{r plott}
 #plot(dtrain$price, dtrain$carat)
 #plot(dtrain$logprice, dtrain$carat)
@@ -66,7 +62,10 @@ library(MASS)
 boxcox(logprice.lm, plotit=TRUE)
 #summary(logprice.lm)
 
+```
+We see that in the BoxCox plots, the lambda value at maximum log-likelihood is closer to one for the logprice than for price. When lambda is close to one it means that one should use the model that is plotted. Also, we want the residuals to be independent of each other, meaning they are randomly spread and that we do not see a pattern in the residual plot. We also we want their variance to be constant. Therefore we choose to use the logprice as responce variable. 
 
+```{r }
 plot(logprice.lm$fitted.values, dtrain$carat)
 plot(logprice.lm$fitted.values, dtrain$logcarat)
 plot(logprice.lm$fitted.values, dtrain$color)
@@ -76,9 +75,17 @@ plot(logprice.lm$fitted.values, dtrain$cut)
 ```
 
 
+
 Use the local regression model $\texttt{logprice} = \beta_0 + \beta_1 \texttt{carat}+ \beta_2 \texttt{carat}^2$ weighted by the tricube kernel $K_{i0}$. 
 
 **Q2:** What is the predicted price of a diamond weighting 1 carat. Use the closest 20% of the observations.  
+```{r}
+fit = loess(dtrain$logprice ~ dtrain$carat, span=.2)
+plot(fit, main = "Local Regression")
+df=fit$trace.hat
+
+```
+
 **Q3:** What choice of $\beta_1$, $\beta_2$ and $K_{i0}$ would result in KNN-regression?  
 
 **Q4:** Describe how you can perform model selection in regression with AIC as criterion.  
