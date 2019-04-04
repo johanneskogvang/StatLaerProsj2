@@ -47,20 +47,33 @@ dtest=all$dtest
 
 **Q1**: Would you choose `price` or `logprice` as response variable? Justify your choice. Next, plot your choice of response pairwise with `carat`, `logcarat`, `color`, `clarity` and `cut`. Comment.
 ```{r plott}
-#plot(dtrain$price, dtrain$carat)
-#plot(dtrain$logprice, dtrain$carat)
-price.lm = lm(price ~ carat + color + clarity + cut, data=dtrain)
-rresprice = rstudent(price.lm)
-plot(price.lm$fitted.values, rresprice)
+fit_price = lm(price ~ .-logprice, data=dtrain)
+rresprice = rstudent(fit_price)
+
+library(ggplot2)
+# residuls vs fitted
+ggplot(fit_price, aes(.fitted, .stdresid)) + geom_point(pch = 21) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_smooth(se = FALSE, col = "red", size = 0.5, method = "loess") +
+  labs(x = "Fitted values", y = "Standardized residuals",
+       title = "Fitted values vs. standardized residuals for price",
+       subtitle = deparse(fit_price$call))
+
 library(MASS)
-boxcox(price.lm, plotit=TRUE)
-#summary(price.lm)
-logprice.lm = lm(logprice ~ logcarat + color + clarity + cut, data=dtrain)
-rreslogprice = rstudent(logprice.lm)
-plot(logprice.lm$fitted.values, rreslogprice)
+boxcox(fit_price, plotit=TRUE)
+
+fit_logprice = lm(logprice ~.-price, data=dtrain)
+library(ggplot2)
+# residuls vs fitted
+ggplot(fit_logprice, aes(.fitted, .stdresid)) + geom_point(pch = 21) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_smooth(se = FALSE, col = "red", size = 0.5, method = "loess") +
+  labs(x = "Fitted values", y = "Standardized residuals",
+       title = "Fitted values vs. standardized residuals for logprice",
+       subtitle = deparse(fit_logprice$call))
 library(MASS)
-boxcox(logprice.lm, plotit=TRUE)
-#summary(logprice.lm)
+boxcox(fit_logprice, plotit=TRUE)
+
 
 ```
 We see that in the BoxCox plots, the lambda value at maximum log-likelihood is closer to one for the logprice than for price. When lambda is close to one it means that one should use the model that is plotted. Also, we want the residuals to be independent of each other, meaning they are randomly spread and that we do not see a pattern in the residual plot. We also we want their variance to be constant. Therefore we choose to use the logprice as responce variable. 
@@ -80,9 +93,13 @@ Use the local regression model $\texttt{logprice} = \beta_0 + \beta_1 \texttt{ca
 
 **Q2:** What is the predicted price of a diamond weighting 1 carat. Use the closest 20% of the observations.  
 ```{r}
-fit = loess(dtrain$logprice ~ dtrain$carat, span=.2)
+#fit = loess(dtrain$logprice ~ dtrain$carat, span=.2)
+fit = loess(logprice ~ carat, data=dtrain, span=.2 )
 plot(fit, main = "Local Regression")
 df=fit$trace.hat
+'fit = loess(logprice ~ carat, data=dtrain, span = .5)
+plot(fit, legend = df)'
+summary(fit)
 
 ```
 
