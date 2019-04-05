@@ -104,6 +104,7 @@ fit = loess(logprice ~ carat, data=dtrain, span=.2 )
 ```
 
 **Q3:** What choice of $\beta_1$, $\beta_2$ and $K_{i0}$ would result in KNN-regression?  
+In local regression we have $\hat{f} = \beta_0+\beta_1 x_i+\beta_2x_i^2 $, while for KNN-regression this $\hat{f}$ is konstant equal to the mean of the observations in the neighbourhood. Hence, for this to be the KNN-regression we have $ \beta_1 = \beta_2 = 0$. Also, we want $K_{i0}$ equal to one for the observations in the neighbourhood, and zero for the ones outside. 
 
 **Q4:** Describe how you can perform model selection in regression with AIC as criterion.  
 **Q5:** What are the main differences between using AIC for model selection and using cross-validation (with mean squared test error MSE)?  
