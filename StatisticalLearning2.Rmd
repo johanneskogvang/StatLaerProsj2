@@ -125,19 +125,11 @@ summary(fit)
 
 # Problem 2: Unsupervised learning [3 points]
 
-**Q21:** What is the definition of a principal component score, and how is the score related to the eigenvectors of the matrix ${\hat {\bf R}}$. 
-
-**Q22:** Explain what is given in the plot with title "First eigenvector". Why are there only $n=64$ eigenvectors and $n=64$ principal component scores?
-
-**Q23:** How many principal components are needed to explain 80% of the total variance in ${\bf Z}$? Why is `sum(pca$sdev^2)=p`?  
-
-**Q24**: Study the PC1 vs PC2 plot, and comment on the groupings observed. What can you say about the placement of the `K262`, `MCF7` and `UNKNOWN` samples? Produce the same plot for two other pairs of PCs and comment on your observations.
-
-
+**Q21:** The principal component score is a measurement of how important a given set of observations is for a principal component. The principal components are the eigenvectors of the covariance matrix ${\hat {\bf R}}$, and thus a principal component score for a set of observations is the scaled observations multiplied with a principal component.
+$$\text{score}_i = \sum_{j=1}^{p}x_{ij}\cdot(PCi_j)$$
 ```{r}
 library(ElemStatLearn)
 X=t(nci) #n times p matrix
-table(rownames(X))
 ngroups=length(table(rownames(X)))
 cols=rainbow(ngroups)
 cols[c(4,5,7,8,14)] = "black"
@@ -156,7 +148,41 @@ plot(pca$x[,1],pca$x[,2],xlab="PC1",ylab="PC2",pch=pchsamples,col=colsamples)
 legend("bottomright",legend = colsvsnames[,2],cex=0.55,col=cols,pch = pch.vec)
 
 plot(1:dim(X)[2],pca$rotation[,1],type="l",xlab="genes",ylab="weight",main="First eigenvector")
+
 ```
+
+
+**Q22:** The plot "First eigenvector" shows the weights of the first eigenvector of $\hat{\bf{R}}$ which is also the first principal component. The reason why there is only $n=64$ principal component is that there can not be more principal components than the rank of $\bf{X}$. This is because all the principal components are linearly independent, and thus the number of principal components (which is the eigenvectors of $\hat{\bf{R}}$) is bounded by the rank of $X$ which is maximally $n - 1=63$ (reduces to $n-1$ because of the centering). As seen from **Q21**, the score is directly related to a given principal component, so the number of component scores is always the same as the number of principle components.
+
+**Q23:** The proportion of variance explained by a single principle component is calculated as 
+$$\text{PVE}=\frac{\text{variance explained by }m\text{th component}}{\text{total variance}} = \frac{\frac{1}{n}\sum_{i=1}^{n}(\sum_{j = 1}^{p} \phi_{jm}z_{ij})^2}{\frac{1}{n}\sum_{j=1}^{p}\sum_{i=1}^{n}z_{ij}}.$$
+From this formula it is also easy to see that the total variance `sum(pca$sdev^2=p)`. The total variance defined above is the same as the sum of the variances of the columns of $\bf{Z}$ which is $p$ because they are standardized and thus every column has variance $1^2=1$. An easier way of computing the proportion of variance is to use the eigenvalues corresponding to the principle components. It can be shown that $\text{Var}(\phi_j) = \lambda_j$ and thus $$\text{PVE}=\frac{\lambda_m}{\sum_{j=1}^{p}\lambda_j}$$
+
+```{r proportion of variance}
+pve=100*pca$sdev^2/sum(pca$sdev^2)
+plot(cumsum(pve), type = "o", ylab = "Cumulative PVE", xlab = "Principal component", col="brown3")
+
+totvar = sum(pca$sdev^2)
+pve32=sum(pca$sdev[1:32]^2)/totvar
+
+pve31 = sum(pca$sdev[1:31]^2)/totvar
+
+cat("The first 31 principal components explains", pve31 * 100, "% of the variance and 32 principal components explains", pve32 * 100, "% of the variance. Thus we need 32 principal components to explain 80% of the variance in the data.")
+```
+
+**Q24**: From the plot above, plotting PC1 agianst PC2, the most obvious clustering is the blue clustering, where the genes are from `MELANOMA` cancer tumors. The green `LEUKEMIA` genes are also easy to seperate from the others, and so are genes from `COLON` cancer tumors. We observe that the genes from other cancer types are mostly located in the left upmost corner and is for the most grouped together. The exeption is the genes from the breast cancer tumor, which are not clustered together at all and is spread around the whole plot. 
+  It is known that the `K562` samples are leukemia cells and we can see from the plot that they are clustered together with the other leukemia samples. The breast cancer samples `MCF7` is harder to say something about because the other breast cancer samples are also spread widely around. The unknown sample is laying in the upper left corner, so it could belong to any of those group really. The most likely cancer type is although `NSCLC` or `OVARIAN` because the closest points are of those types.
+
+We plot a couple of other projections of the data onto the principal components to see if we find other interesting relationships. It is mostly interesting to look at the fist principal comonents, because it is in those that contains the most variations. It could have been interesting to find plots where the breast cancer cells are clustered together, but this was very hard to do. Below two other pairs of principal components are plotted together. In the first plot we see PC1 agianst PC3 and here we also see that green and yellow are clustered together and in the second we see the blue points clustered clearly together. After plotting several principal components, we see that it is easy to separate the blue, green and yellow points, but other than that it is hard to find PCs clearly separating other colors.
+
+```{r}
+plot(pca$x[,1],pca$x[,3],xlab="PC1",ylab="PC3",pch=pchsamples,col=colsamples)
+legend("bottomright",legend = colsvsnames[,2],cex=0.55,col=cols,pch = pch.vec)
+
+plot(pca$x[,2],pca$x[,4],xlab="PC2",ylab="PC4",pch=pchsamples,col=colsamples)
+legend("bottomright",legend = colsvsnames[,2],cex=0.55,col=cols,pch = pch.vec)
+```
+
 
 **Q25:**: Explain what it means to use Euclidean distance and average linkage for hierarchical clustering. 
 
