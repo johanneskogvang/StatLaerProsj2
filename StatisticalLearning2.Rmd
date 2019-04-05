@@ -47,6 +47,12 @@ dtest=all$dtest
 
 **Q1**: Would you choose `price` or `logprice` as response variable? Justify your choice. Next, plot your choice of response pairwise with `carat`, `logcarat`, `color`, `clarity` and `cut`. Comment.
 ```{r plott}
+
+
+hist(dtrain$price)
+hist(dtrain$logprice)
+
+
 fit_price = lm(price ~ .-logprice, data=dtrain)
 rresprice = rstudent(fit_price)
 
@@ -79,12 +85,10 @@ boxcox(fit_logprice, plotit=TRUE)
 We see that in the BoxCox plots, the lambda value at maximum log-likelihood is closer to one for the logprice than for price. When lambda is close to one it means that one should use the model that is plotted. Also, we want the residuals to be independent of each other, meaning they are randomly spread and that we do not see a pattern in the residual plot. We also we want their variance to be constant. Therefore we choose to use the logprice as responce variable. 
 
 ```{r }
-plot(logprice.lm$fitted.values, dtrain$carat)
-plot(logprice.lm$fitted.values, dtrain$logcarat)
-plot(logprice.lm$fitted.values, dtrain$color)
-plot(logprice.lm$fitted.values, dtrain$clarity)
-plot(logprice.lm$fitted.values, dtrain$cut)
-
+plot(dtrain$logprice, dtrain$carat)
+plot(dtrain$logprice, dtrain$logcarat)
+plot(dtrain$logprice, dtrain$clarity)
+plot(dtrain$logprice, dtrain$cut)
 ```
 
 
@@ -92,14 +96,10 @@ plot(logprice.lm$fitted.values, dtrain$cut)
 Use the local regression model $\texttt{logprice} = \beta_0 + \beta_1 \texttt{carat}+ \beta_2 \texttt{carat}^2$ weighted by the tricube kernel $K_{i0}$. 
 
 **Q2:** What is the predicted price of a diamond weighting 1 carat. Use the closest 20% of the observations.  
-```{r}
+```{r message=FALSE, warning=FALSE}
 #fit = loess(dtrain$logprice ~ dtrain$carat, span=.2)
 fit = loess(logprice ~ carat, data=dtrain, span=.2 )
-plot(fit, main = "Local Regression")
-df=fit$trace.hat
-'fit = loess(logprice ~ carat, data=dtrain, span = .5)
-plot(fit, legend = df)'
-summary(fit)
+10^predict(fit, 1)
 
 ```
 
