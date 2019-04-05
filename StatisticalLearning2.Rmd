@@ -47,31 +47,48 @@ dtest=all$dtest
 
 **Q1**: Would you choose `price` or `logprice` as response variable? Justify your choice. Next, plot your choice of response pairwise with `carat`, `logcarat`, `color`, `clarity` and `cut`. Comment.
 ```{r plott}
-#plot(dtrain$price, dtrain$carat)
-#plot(dtrain$logprice, dtrain$carat)
-price.lm = lm(price ~ carat + color + clarity + cut, data=dtrain)
-rresprice = rstudent(price.lm)
-plot(price.lm$fitted.values, rresprice)
+
+
+hist(dtrain$price)
+hist(dtrain$logprice)
+
+
+fit_price = lm(price ~ .-logprice, data=dtrain)
+rresprice = rstudent(fit_price)
+
+library(ggplot2)
+# residuls vs fitted
+ggplot(fit_price, aes(.fitted, .stdresid)) + geom_point(pch = 21) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_smooth(se = FALSE, col = "red", size = 0.5, method = "loess") +
+  labs(x = "Fitted values", y = "Standardized residuals",
+       title = "Fitted values vs. standardized residuals for price",
+       subtitle = deparse(fit_price$call))
+
 library(MASS)
-boxcox(price.lm, plotit=TRUE)
-#summary(price.lm)
-logprice.lm = lm(logprice ~ logcarat + color + clarity + cut, data=dtrain)
-rreslogprice = rstudent(logprice.lm)
-plot(logprice.lm$fitted.values, rreslogprice)
+boxcox(fit_price, plotit=TRUE)
+
+fit_logprice = lm(logprice ~.-price, data=dtrain)
+library(ggplot2)
+# residuls vs fitted
+ggplot(fit_logprice, aes(.fitted, .stdresid)) + geom_point(pch = 21) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_smooth(se = FALSE, col = "red", size = 0.5, method = "loess") +
+  labs(x = "Fitted values", y = "Standardized residuals",
+       title = "Fitted values vs. standardized residuals for logprice",
+       subtitle = deparse(fit_logprice$call))
 library(MASS)
-boxcox(logprice.lm, plotit=TRUE)
-#summary(logprice.lm)
+boxcox(fit_logprice, plotit=TRUE)
+
 
 ```
 We see that in the BoxCox plots, the lambda value at maximum log-likelihood is closer to one for the logprice than for price. When lambda is close to one it means that one should use the model that is plotted. Also, we want the residuals to be independent of each other, meaning they are randomly spread and that we do not see a pattern in the residual plot. We also we want their variance to be constant. Therefore we choose to use the logprice as responce variable. 
 
 ```{r }
-plot(logprice.lm$fitted.values, dtrain$carat)
-plot(logprice.lm$fitted.values, dtrain$logcarat)
-plot(logprice.lm$fitted.values, dtrain$color)
-plot(logprice.lm$fitted.values, dtrain$clarity)
-plot(logprice.lm$fitted.values, dtrain$cut)
-
+plot(dtrain$logprice, dtrain$carat)
+plot(dtrain$logprice, dtrain$logcarat)
+plot(dtrain$logprice, dtrain$clarity)
+plot(dtrain$logprice, dtrain$cut)
 ```
 
 
@@ -79,14 +96,15 @@ plot(logprice.lm$fitted.values, dtrain$cut)
 Use the local regression model $\texttt{logprice} = \beta_0 + \beta_1 \texttt{carat}+ \beta_2 \texttt{carat}^2$ weighted by the tricube kernel $K_{i0}$. 
 
 **Q2:** What is the predicted price of a diamond weighting 1 carat. Use the closest 20% of the observations.  
-```{r}
-fit = loess(dtrain$logprice ~ dtrain$carat, span=.2)
-plot(fit, main = "Local Regression")
-df=fit$trace.hat
+```{r message=FALSE, warning=FALSE}
+#fit = loess(dtrain$logprice ~ dtrain$carat, span=.2)
+fit = loess(logprice ~ carat, data=dtrain, span=.2 )
+10^predict(fit, 1)
 
 ```
 
 **Q3:** What choice of $\beta_1$, $\beta_2$ and $K_{i0}$ would result in KNN-regression?  
+In local regression we have $\hat{f} = \beta_0+\beta_1 x_i+\beta_2x_i^2 $, while for KNN-regression this $\hat{f}$ is konstant equal to the mean of the observations in the neighbourhood. Hence, for this to be the KNN-regression we have $ \beta_1 = \beta_2 = 0$. Also, we want $K_{i0}$ equal to one for the observations in the neighbourhood, and zero for the ones outside. 
 
 **Q4:** Describe how you can perform model selection in regression with AIC as criterion.  
 When we perform model selection in regression with AIC as the criterion, we perform a best subset selcetion, and choose the set of covariates that produce the lowest AIC value. 
@@ -152,19 +170,11 @@ mse
 
 # Problem 2: Unsupervised learning [3 points]
 
-**Q21:** What is the definition of a principal component score, and how is the score related to the eigenvectors of the matrix ${\hat {\bf R}}$. 
-
-**Q22:** Explain what is given in the plot with title "First eigenvector". Why are there only $n=64$ eigenvectors and $n=64$ principal component scores?
-
-**Q23:** How many principal components are needed to explain 80% of the total variance in ${\bf Z}$? Why is `sum(pca$sdev^2)=p`?  
-
-**Q24**: Study the PC1 vs PC2 plot, and comment on the groupings observed. What can you say about the placement of the `K262`, `MCF7` and `UNKNOWN` samples? Produce the same plot for two other pairs of PCs and comment on your observations.
-
-
+**Q21:** The principal component score is a measurement of how important a given set of observations is for a principal component. The principal components are the eigenvectors of the covariance matrix ${\hat {\bf R}}$, and thus a principal component score for a set of observations is the scaled observations multiplied with a principal component.
+$$\text{score}_i = \sum_{j=1}^{p}x_{ij}\cdot(PCi_j)$$
 ```{r}
 library(ElemStatLearn)
 X=t(nci) #n times p matrix
-table(rownames(X))
 ngroups=length(table(rownames(X)))
 cols=rainbow(ngroups)
 cols[c(4,5,7,8,14)] = "black"
@@ -183,7 +193,41 @@ plot(pca$x[,1],pca$x[,2],xlab="PC1",ylab="PC2",pch=pchsamples,col=colsamples)
 legend("bottomright",legend = colsvsnames[,2],cex=0.55,col=cols,pch = pch.vec)
 
 plot(1:dim(X)[2],pca$rotation[,1],type="l",xlab="genes",ylab="weight",main="First eigenvector")
+
 ```
+
+
+**Q22:** The plot "First eigenvector" shows the weights of the first eigenvector of $\hat{\bf{R}}$ which is also the first principal component. The reason why there is only $n=64$ principal component is that there can not be more principal components than the rank of $\bf{X}$. This is because all the principal components are linearly independent, and thus the number of principal components (which is the eigenvectors of $\hat{\bf{R}}$) is bounded by the rank of $X$ which is maximally $n - 1=63$ (reduces to $n-1$ because of the centering). As seen from **Q21**, the score is directly related to a given principal component, so the number of component scores is always the same as the number of principle components.
+
+**Q23:** The proportion of variance explained by a single principle component is calculated as 
+$$\text{PVE}=\frac{\text{variance explained by }m\text{th component}}{\text{total variance}} = \frac{\frac{1}{n}\sum_{i=1}^{n}(\sum_{j = 1}^{p} \phi_{jm}z_{ij})^2}{\frac{1}{n}\sum_{j=1}^{p}\sum_{i=1}^{n}z_{ij}}.$$
+From this formula it is also easy to see that the total variance `sum(pca$sdev^2=p)`. The total variance defined above is the same as the sum of the variances of the columns of $\bf{Z}$ which is $p$ because they are standardized and thus every column has variance $1^2=1$. An easier way of computing the proportion of variance is to use the eigenvalues corresponding to the principle components. It can be shown that $\text{Var}(\phi_j) = \lambda_j$ and thus $$\text{PVE}=\frac{\lambda_m}{\sum_{j=1}^{p}\lambda_j}$$
+
+```{r proportion of variance}
+pve=100*pca$sdev^2/sum(pca$sdev^2)
+plot(cumsum(pve), type = "o", ylab = "Cumulative PVE", xlab = "Principal component", col="brown3")
+
+totvar = sum(pca$sdev^2)
+pve32=sum(pca$sdev[1:32]^2)/totvar
+
+pve31 = sum(pca$sdev[1:31]^2)/totvar
+
+cat("The first 31 principal components explains", pve31 * 100, "% of the variance and 32 principal components explains", pve32 * 100, "% of the variance. Thus we need 32 principal components to explain 80% of the variance in the data.")
+```
+
+**Q24**: From the plot above, plotting PC1 agianst PC2, the most obvious clustering is the blue clustering, where the genes are from `MELANOMA` cancer tumors. The green `LEUKEMIA` genes are also easy to seperate from the others, and so are genes from `COLON` cancer tumors. We observe that the genes from other cancer types are mostly located in the left upmost corner and is for the most grouped together. The exeption is the genes from the breast cancer tumor, which are not clustered together at all and is spread around the whole plot. 
+  It is known that the `K562` samples are leukemia cells and we can see from the plot that they are clustered together with the other leukemia samples. The breast cancer samples `MCF7` is harder to say something about because the other breast cancer samples are also spread widely around. The unknown sample is laying in the upper left corner, so it could belong to any of those group really. The most likely cancer type is although `NSCLC` or `OVARIAN` because the closest points are of those types.
+
+We plot a couple of other projections of the data onto the principal components to see if we find other interesting relationships. It is mostly interesting to look at the fist principal comonents, because it is in those that contains the most variations. It could have been interesting to find plots where the breast cancer cells are clustered together, but this was very hard to do. Below two other pairs of principal components are plotted together. In the first plot we see PC1 agianst PC3 and here we also see that green and yellow are clustered together and in the second we see the blue points clustered clearly together. After plotting several principal components, we see that it is easy to separate the blue, green and yellow points, but other than that it is hard to find PCs clearly separating other colors.
+
+```{r}
+plot(pca$x[,1],pca$x[,3],xlab="PC1",ylab="PC3",pch=pchsamples,col=colsamples)
+legend("bottomright",legend = colsvsnames[,2],cex=0.55,col=cols,pch = pch.vec)
+
+plot(pca$x[,2],pca$x[,4],xlab="PC2",ylab="PC4",pch=pchsamples,col=colsamples)
+legend("bottomright",legend = colsvsnames[,2],cex=0.55,col=cols,pch = pch.vec)
+```
+
 
 **Q25:**: Explain what it means to use Euclidean distance and average linkage for hierarchical clustering. 
 
