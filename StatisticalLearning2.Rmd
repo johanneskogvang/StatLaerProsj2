@@ -89,8 +89,21 @@ df=fit$trace.hat
 **Q3:** What choice of $\beta_1$, $\beta_2$ and $K_{i0}$ would result in KNN-regression?  
 
 **Q4:** Describe how you can perform model selection in regression with AIC as criterion.  
+When we perform model selection in regression with AIC as the criterion, we perform a best subset selcetion, and choose the set of covariates that produce the lowest AIC value. 
+The full procedure when one has a model depending on $k$ covariates is as follows:
+1) For every value $i$ from 1 to $k$, all $k \choose j$ models that contain $j$ covariates are fitted. 
+2) The model $M_j$ with the lowest SSE value is selected. 
+3) From all $M_j$, $j  = 0, ... , k$, where $M_0$ is the model with only the intercept, the model with the lowest AIC is selected. The AIC is defined as
+
+$$\text{AIC} = \frac{\text{SSE}/n}{\hat{\sigma^2}} + 2\frac{p}{n}$$
+where $n$ is the number of observations and $p$ is the number of selected covariates in the given model. 
+
 **Q5:** What are the main differences between using AIC for model selection and using cross-validation (with mean squared test error MSE)?  
+
+Cross-validation is in general more computationally expensive than model selection with AIC, however, this is rearly considered a problem with today's computers. Cross-validation also measures the test error directly, instead of adjusting the training error for model size, as the AIC does. Finally, cross-validation makes fewer assumptions about the underlying model. Cross-validation does not directly punish models with many covariates; if two models with different complexity produces the same test error, cross-validation will do nothing to choose the less complex model. 
+
 **Q6:** See the code below for performing model selection with `bestglm()` based on AIC. What kind of contrast is used to represent `cut`, `color` and `clarity`? Write down the final best model and explain what you can interpret from the model.  
+
 **Q7:** Calculate and report the MSE of the test set using the best model (on the scale of `logprice`).  
 
 ```{r,eval=FALSE}
@@ -103,10 +116,24 @@ ds=as.data.frame(within(dtrain,{
   }))
 fit=bestglm(Xy=ds, IC="AIC")$BestModel
 summary(fit)
+
+predict(fit,1)
+
+#NB! dette svarer ikke på Q7!
+res_fit <- fit$residuals
+abs_res <- abs(res_fit)
+n <- length(res_fit)
+sum_res <- sum(abs_res**2)
+sum_res
+mse <- sum_res / n
+mse
+
 ```
 
 **Q8:** Build a model matrix for the covariates `~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1`. What is the dimension of this matrix?  
+
 **Q9:** Fit a lasso regression to the diamond data with `logprice` as the response and the model matrix given in Q8. How did you find the value to be used for the regularization parameter?  
+
 **Q10:** Calculate and report the MSE of the test set (on the scale of `logprice`).  
 
 **Q11:** A regression tree to model is built using a _greedy_ approach. What does that mean? Explain the strategy used for constructing a regression tree.  
