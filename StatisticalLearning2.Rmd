@@ -150,6 +150,7 @@ summary(fit)
 res_fit <- fit$residuals
 abs_res <- abs(res_fit)
 n <- length(res_fit)
+n
 sum_res <- sum(abs_res**2)
 sum_res
 mse <- sum_res / n
@@ -159,18 +160,37 @@ mse
 
 **Q8:** Build a model matrix for the covariates `~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1`. What is the dimension of this matrix?  
 ```{r}
-price_lasso=lm(logprice~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1, data=dtrain)
-#summary(price_lasso)
-#tror kanskje heller du skal lage en matrise som du kan bruke lasso på. den må være ant.obs x 10(?) stor. 
-# x = matrix(rnorm(n*p), nrow=n, ncol=p)?? fra yutube. n = ant samples, p=ant parameters. 
-summary(dtrain)
-x = matrix()
+#Ny kunnskap fra recomEx6:
+x_train = model.matrix(~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1, data=dtrain)
+dim(x)
 
 ```
-
+The dimension of this matrix is $5000 \times 24$. 
 
 
 **Q9:** Fit a lasso regression to the diamond data with `logprice` as the response and the model matrix given in Q8. How did you find the value to be used for the regularization parameter?  
+```{r}
+y_train = dtrain$logprice
+lasso_mod = glmnet(x_train,y_train,alpha=1)
+
+set.seed(1)
+cv.out = cv.glmnet(x_train,y_train,alpha=1)
+plot(cv.out)
+
+best_lambda_lasso = cv.out$lambda.min
+best_lambda_lasso
+
+x_test = model.matrix(~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1, data=dtest)
+y_test = dtest$logprice
+
+lasso_predictions = predict(lasso_mod, s=best_lambda_lasso, newx = x_test)
+lasso_square_errors = as.numeric((lasso_predictions-y_test)^2)
+#squared_errors = data.frame(lasso_square_errors=lasso_square_errors, squared_errors)
+squared_errors = data.frame(lasso_square_errors=lasso_square_errors, abs_res) #er det riktig å ha abs_res her???
+```
+
+We find the value to be used for the regularzation parameter, $\lambda$, using crossvalidation.  
+
 
 **Q10:** Calculate and report the MSE of the test set (on the scale of `logprice`).  
 
