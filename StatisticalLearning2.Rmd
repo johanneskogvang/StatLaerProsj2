@@ -386,43 +386,47 @@ diab.glm = glm(diabetes ~ ., data = ctrain, family = "binomial")
 summary(diab.glm)
 
 ```
-Making a new model based on the significant covariates:
-First one with the covariates with significance 0.001, then another with covaritaes with significance 0.001 and the last with 0.1.
-hvordan vet man hvem av de man skal velge???
-```{r}
-diab.glm2 = glm(diabetes ~ glu+ped, data=ctrain, family = "binomial")
-#summary(diab.glm2)
-#AIC = 298.52
-
-diab.glm3=glm(diabetes ~ glu+ped+bmi, data=ctrain, family = "binomial")
-#summary(diab.glm3)
-#AIC = 281.4
-
-diab.glm4=glm(diabetes ~ glu+ped+bmi+npreg+age, data=ctrain, family = "binomial")
-summary(diab.glm4)
-#her blir AIC lavere enn hvis man tar med alle variablene.
-#AIC=267.89
-
-
-```
 
 Bruker diab.glm4 videre fordi den har lavest AIC. Vet ikke om det er riktig, velg en annen senere hvis det viser seg å være bedre. 
 ```{r}
-diab.glm4_prob=predict(diab.glm4, newdata=ctest)
+diab.glm_prob=predict(diab.glm, newdata=ctest, type="response")
+diab.glm_pred=ifelse(diab.glm_prob > 0.5, 1, 0)
+conf_test=table(diab.glm_pred, ctest$diabetes)
+conf_test
+misclass_test = (232-sum(diag(conf_test)))/232
+misclass_test
+
+summary(diab.glm_prob)
+dim(diab.glm_prob) #denne er NULL, det må da være feil????
+```
 
 
-#glm.Weekly2_prob = predict(glm.Weekly2, newdata=Weekly_test, type="response")
-#glm.Weekly2_pred = ifelse(glm.Weekly2_prob > 0.5, "Up", "Down")
-#table(glm.Weekly2_pred, Weekly_test$Direction
+The misclassification test error rate is thus
+$$Test\,\, error = \frac{29+18}{232} = 0.2025862. $$
+We can also use the fitted model to find predictions for the training data and hence, finding the miscalsification training error rate.
+```{r}
+glm_train_prob=diab.glm$fitted.values
+glm_train_pred=ifelse(glm_train_prob>0.5, 1, 0)
+conf_train=table(glm_train_pred, ctrain$diabetes)
+conf_train
+misclas_train = (300 - sum(diag(conf_train)))/300
+misclas_train
 
 
 ```
 
+Finding ROC-curve and AUC
+```{r}
+library(pROC)
+dim(ctest)
+dim(diab.glm_prob)
+glm_ROC=roc(ctest, diab.glm_prob, legacy.axces=TRUE)
 
+#SA_roc = roc(SAheart[-train_ID, 10], probs_SA, legacy.axes = TRUE)
+#ggroc(SA_roc) + ggtitle("ROC curve") + annotate("text", x = 0.25, y = 0.3, 
+ #   label = "AUC = 0.7762")
 
-
-
-
+```
 
 
 
