@@ -253,13 +253,16 @@ The main difference between random forest and boosting is that in random forest 
 
 ```{r}
 library(randomForest)
+#randFor.logprice=randomForest(~logcarat+cut+clarity+color+depth+table+xx+yy+zz, data=dtrain, ntree=100, mtry=3)
+randFor.logprice=randomForest(~logcarat+cut+clarity+color+depth+table+xx+yy+zz, data=dtrain, mtry=3, importance=TRUE) #dette funker ikkke???
+randFor.logprice$confusion
+#summary(randFor.logprice)
+#default mtry=m er p/3 for regression, velger default. 
 
-randFor.logprice=randomForest(~logcarat+cut+clarity+color+depth+table+xx+yy+zz, data=dtrain, ntree=100, mtry=3)
-summary(randFor.logprice)
-#default mtry=m er p/3 for regression, mens boken sier m=sqrt(p). Stoler på boken og velger sqrt(p).
+
 
 #lag plott av mse for å sjekke hvilken B du må velge. 
-randFor_pred=predict(randFor.logprice, newdata=dtest)
+#randFor_pred=predict(randFor.logprice, newdata=dtest)
 #randFor_mse = mean((randFor_pred - dtest$logprice)^2)
 #randFor_mse
 
@@ -358,10 +361,76 @@ ctest=flying$ctest
 ```
 
 **Q28:** Start by getting to know the _training data_, by producing summaries and plots. Write a few sentences about what you observe and include your top 3 informative plots and/or outputs.
+```{r}
+#summary(ctrain)
+#str(ctrain)
+#Tror at disse head-tingene bare vil ta med de første 6 personene, hvorfor det???
+#head(ctrain)
+ggpairs(ctrain)
+```
+her tregner eg litt hjelp, heehheh
+lag noen flere plott, gjrø det jo litt lettere. 
+Correlation mellom skin og bmi. corr=0.64, pluss plottet ser korrelert ut. 
+kanskje correlation mellom ped og age?
+og bp og age??? ntjaaa
+kanskje npreg og age? ja. 
+
+
 
 **Q29:** Use different methods to analyse the data. In particular use 
 
 * one method from Module 4: Classification
+We choose logistic regression since we only have two responce classes.
+```{r}
+diab.glm = glm(diabetes ~ ., data = ctrain, family = "binomial")
+summary(diab.glm)
+
+```
+Making a new model based on the significant covariates:
+First one with the covariates with significance 0.001, then another with covaritaes with significance 0.001 and the last with 0.1.
+hvordan vet man hvem av de man skal velge???
+```{r}
+diab.glm2 = glm(diabetes ~ glu+ped, data=ctrain, family = "binomial")
+#summary(diab.glm2)
+#AIC = 298.52
+
+diab.glm3=glm(diabetes ~ glu+ped+bmi, data=ctrain, family = "binomial")
+#summary(diab.glm3)
+#AIC = 281.4
+
+diab.glm4=glm(diabetes ~ glu+ped+bmi+npreg+age, data=ctrain, family = "binomial")
+summary(diab.glm4)
+#her blir AIC lavere enn hvis man tar med alle variablene.
+#AIC=267.89
+
+
+```
+
+Bruker diab.glm4 videre fordi den har lavest AIC. Vet ikke om det er riktig, velg en annen senere hvis det viser seg å være bedre. 
+```{r}
+diab.glm4_prob=predict(diab.glm4, newdata=ctest)
+
+
+#glm.Weekly2_prob = predict(glm.Weekly2, newdata=Weekly_test, type="response")
+#glm.Weekly2_pred = ifelse(glm.Weekly2_prob > 0.5, "Up", "Down")
+#table(glm.Weekly2_pred, Weekly_test$Direction
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 * one method from Module 8: Trees (and forests)
 * one method from Module 9: Support vector machines and, finally
 * one method from Module 11: Neural networks
