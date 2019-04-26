@@ -207,7 +207,7 @@ When constructing a regression tree one uses the top-down implementation with th
 
 **Q12:** Is a regression tree a suitable method to handle both numerical and categorical covariates? Elaborate. 
 Bare numerical siden man lager sliptsene selv? bruk heller classification tree til categorical??
-fin på begge. 
+men martine sier at den er bra på begge. 
 
 **Q13:** Fit a (full) regression tree to the diamond data with `logprice` as the response (and the same covariates as for c and d), and plot the result. Comment briefly on you findings. 
 ```{r}
@@ -352,6 +352,9 @@ npcs=64
 pheatmap(pca$x[,1:npcs],scale="none",cluster_col=FALSE,cluster_row=TRUE,clustering_distance_rows = "euclidean",clustering_method="average",fontsize_row=5,fontsize_col=5)
 ```
 
+
+
+
 # Problem 3: Flying solo with diabetes data [6 points]
 
 ```{r}
@@ -362,6 +365,8 @@ ctest=flying$ctest
 
 **Q28:** Start by getting to know the _training data_, by producing summaries and plots. Write a few sentences about what you observe and include your top 3 informative plots and/or outputs.
 ```{r}
+
+library(GGally)
 #summary(ctrain)
 #str(ctrain)
 #Tror at disse head-tingene bare vil ta med de første 6 personene, hvorfor det???
@@ -379,15 +384,37 @@ kanskje npreg og age? ja.
 
 **Q29:** Use different methods to analyse the data. In particular use 
 
-* one method from Module 4: Classification
+* one method from Module 4: Classification   
 We choose logistic regression since we only have two responce classes.
 ```{r}
 diab.glm = glm(diabetes ~ ., data = ctrain, family = "binomial")
 summary(diab.glm)
 
 ```
+When using logistic regression, the model is based on probabilities that $Y=1$. That means the pobability that a person has diabetes. 
+$$p(x_i)= p_i = \frac{e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}}
+{1+e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}}   $$ 
+One can also write this as 
+$$ log \frac{p_i}{1-p_i} = {{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}$$
 
-Bruker diab.glm4 videre fordi den har lavest AIC. Vet ikke om det er riktig, velg en annen senere hvis det viser seg å være bedre. 
+
+
+
+
+What are the model assumptions????? 
+finnes noen assumtions her: https://www.statisticssolutions.com/assumptions-of-logistic-regression/
+skjlnner ikke alt det som står der men.   
+en ting er i hvert fall: observations must be independent of each other. 
+
+
+Tuning parameters or model selection, how is that perfromed??????   
+
+Insight into the interpretation of the predicted model: torr man bør introdusere odds her. 
+
+
+
+
+Evaluation of the model:
 ```{r}
 diab.glm_prob=predict(diab.glm, newdata=ctest, type="response")
 diab.glm_pred=ifelse(diab.glm_prob > 0.5, 1, 0)
@@ -396,12 +423,11 @@ conf_test
 misclass_test = (232-sum(diag(conf_test)))/232
 misclass_test
 
-summary(diab.glm_prob)
-dim(diab.glm_prob) #denne er NULL, det må da være feil????
+#summary(diab.glm_prob)
 ```
 
 
-The misclassification test error rate is thus
+If one appiles this model to the test data one can find the proporsion of mistakes that are made, called the misclassification test error rate. The misclassification test error rate is thus
 $$Test\,\, error = \frac{29+18}{232} = 0.2025862. $$
 We can also use the fitted model to find predictions for the training data and hence, finding the miscalsification training error rate.
 ```{r}
@@ -418,13 +444,38 @@ misclas_train
 Finding ROC-curve and AUC
 ```{r}
 library(pROC)
-dim(ctest)
-dim(diab.glm_prob)
-glm_ROC=roc(ctest, diab.glm_prob, legacy.axces=TRUE)
+library(ggplot2)
+#glm_ROC=roc(ctest[ ,1], diab.glm_prob, legacy.axces=TRUE)
+#ggroc(glm_ROC) + ggtitle("ROC curve")
 
-#SA_roc = roc(SAheart[-train_ID, 10], probs_SA, legacy.axes = TRUE)
-#ggroc(SA_roc) + ggtitle("ROC curve") + annotate("text", x = 0.25, y = 0.3, 
- #   label = "AUC = 0.7762")
+par(pty='s')
+glm_ROC = roc(ctest[ ,1], diab.glm_prob, plot=TRUE, legacy.axces=TRUE)
+glm_ROC
+
+
+```
+
+The area under the ROC curve, hence the AUC, is calcualed to be 0.8451
+
+
+egentlig står det i module pagene til M4 at man buker KNN når class boundaries er non-linear, kanskje de erdet her? er litt usikker på det egentlig. 
+
+
+
+
+
+* one method from Module 8: Trees (and forests)
+
+We choos to use random forest to analyse the data. 
+
+Write out themodel: det er jo litt vanskelig når det er en forest?? 
+Model assumptions: 
+Tuning parameters: m=ant predictorer som averages over i hver split. Og antall trær. hvordan finner man disse??
+Insight into the interpretation of the fitted model:
+Evaluation of the model:
+```{r}
+
+
 
 ```
 
@@ -435,7 +486,7 @@ glm_ROC=roc(ctest, diab.glm_prob, legacy.axces=TRUE)
 
 
 
-* one method from Module 8: Trees (and forests)
+
 * one method from Module 9: Support vector machines and, finally
 * one method from Module 11: Neural networks
 
