@@ -151,11 +151,13 @@ mse_bsm = mean((dtest$logprice-pred_bsm)^2)
 mse_bsm
 
 ```
+Using the best model, the MSE is calculatet to be $0.003600305$.
+
 
 **Q8:** Build a model matrix for the covariates `~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1`. What is the dimension of this matrix?  
 ```{r}
 #tar -1 fordi vi ikke il ha med intercept i lasso. vil ikke at den coariaten skal bli null. 
-x_train = model.matrix(~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1, data=dtrain)
+x_train = model.matrix(logprice~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1, data=dtrain)
 dim(x_train)
 
 ```
@@ -168,13 +170,13 @@ y_train = dtrain$logprice
 library(glmnet)
 set.seed(1)
 cv.out = cv.glmnet(x_train,y_train,alpha=1)
-#plot(cv.out)
+plot(cv.out)
 
 best_lambda_lasso = cv.out$lambda.min
 best_lambda_lasso
 
-#lager en ny modell med denne lambdaen
-fit_lasso = glmnet(x_train,y_train,alpha=1, lambda=best_lambda_lasso) #Dette er modellen vi skal frem til
+#lager en modell med denne lambdaen
+fit_lasso = glmnet(x_train,y_train,alpha=1, lambda=best_lambda_lasso) 
 
 ```
 
@@ -227,6 +229,7 @@ mse_tree=mean((tree_pred - dtest$logprice)^2)
 mse_tree
 
 ```
+The MSE of the regression tree is $0.01715548$.
 
 
 **Q15:** Explain the motivation behind bagging, and how bagging differs from random forest? What is the role of bootstrapping? 
@@ -252,29 +255,48 @@ The main difference between random forest and boosting is that in random forest 
 **Q18:** Fit a random forest to the diamond data with `logprice` as the response (and the same covariates as before). Comment on your choice of parameter (as decribed in Q16).   
 
 ```{r}
+set.seed(300)
 library(randomForest)
-#randFor.logprice=randomForest(~logcarat+cut+clarity+color+depth+table+xx+yy+zz, data=dtrain, ntree=100, mtry=3)
-randFor.logprice=randomForest(~logcarat+cut+clarity+color+depth+table+xx+yy+zz, data=dtrain, mtry=3, importance=TRUE) #dette funker ikkke???
-randFor.logprice$confusion
-#summary(randFor.logprice)
+rf.logprice=randomForest(logprice~logcarat+cut+clarity+color+depth+table+xx+yy+zz, data=dtrain, mtry=3, ntree=300, importance=TRUE) #dette
 #default mtry=m er p/3 for regression, velger default. 
+plot(rf.logprice)
 
-
-
-#lag plott av mse for å sjekke hvilken B du må velge. 
-#randFor_pred=predict(randFor.logprice, newdata=dtest)
-#randFor_mse = mean((randFor_pred - dtest$logprice)^2)
-#randFor_mse
-
+#hva skal vi velge B til å være? Skal væreså høy at erroren er stabilisert, dvs høyere enn 200 en plass tror jeg. 
+# i følge module pages er B som regel 300 eller 500. 300 ser vel bst ut her. 
 
 ```
 
 **Q19:** Make a variable importance plot and comment on the plot. Calculate and report the MSE of the test set (on the scale of `logprice`).  
+```{r}
+varImpPlot(rf.logprice, type = 2)
+rf.pred=predict(rf.logprice, newdata=dtest)
+mse_rf=mean((rf.pred-dtest$logprice)^2)
+mse_rf
 
+```
 
+We see that $yy$ is the most important covariates when looking at node putiry, while $cut$ seems to be the least important. The MSE of the random forest is $0.002828014$.
 
 
 **Q20:** Finally, compare the results from c (subset selection), d (lasso), e (tree) and f (random forest): Which method has given the best performance on the test set and which method has given you the best insight into the relationship between the price and the covariates?
+```{r}
+library(utils)
+library(pracma)
+mses=c(mse_bsm, mse_lasso, mse_tree, mse_rf)
+names=c("Subset selection", "Lasso", "Tree", "Random forest")
+mse_range = linspace(0,0.2,101)
+plot(mses, axes=FALSE)
+axis(1, at=1:4, lab=names)
+axis(2,mse_range)
+
+print("the MSE's: ")
+for (i in c(1,2,3,4)){
+  print(paste(names[i], ": ", round(mses[i], 4)))
+}
+
+```
+
+We see that the tree has the clearly highest mse, and the random forest the best. skriv noe om relationship between price og covariates. 
 
 
 
@@ -361,6 +383,7 @@ pheatmap(pca$x[,1:npcs],scale="none",cluster_col=FALSE,cluster_row=TRUE,clusteri
 flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
 ctrain=flying$ctrain
 ctest=flying$ctest
+summary(flying)
 ```
 
 **Q28:** Start by getting to know the _training data_, by producing summaries and plots. Write a few sentences about what you observe and include your top 3 informative plots and/or outputs.
@@ -470,11 +493,25 @@ We choos to use random forest to analyse the data.
 
 Write out themodel: det er jo litt vanskelig når det er en forest?? 
 Model assumptions: 
-Tuning parameters: m=ant predictorer som averages over i hver split. Og antall trær. hvordan finner man disse??
+Tuning parameters: m=ant predictorer som averages over i hver split. m=sqrt(p), ca. Og antall trær, må være stor nok til at erroren har flatet ut.
+velger derfor m=2 eller 3
 Insight into the interpretation of the fitted model:
 Evaluation of the model:
 ```{r}
+library(randomForest)
+set.seed(1)
+#diab.rf = randomForest(diabetes ~ ., data=ctrain, mtry=3, ntree=100, importance=TRUE) #dårig ide, dette funker jo ikke. 
+#diab.rf$confusion
+diab.bagging=randomForest(diabetes ~ ., data = ctrain, mtry=7, ntree=500, importance=TRUE)
+diab.bagging$confusion
 
+#set.seed(1)
+#bag = randomForest(clinically.important.brain.injury ~ ., data = headInjury2, 
+ #   subset = train, mtry = 10, ntree = 500, importance = TRUE)
+#bag$confusion
+  
+#  rf = randomForest(clinically.important.brain.injury ~ ., data = headInjury2, 
+#    subset = train, mtry = 3, ntree = 500, importance = TRUE)
 
 
 ```
