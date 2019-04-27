@@ -428,9 +428,11 @@ What are the model assumptions?????
 finnes noen assumtions her: https://www.statisticssolutions.com/assumptions-of-logistic-regression/
 skjlnner ikke alt det som står der men.   
 en ting er i hvert fall: observations must be independent of each other. 
+bare to response classes. 
 
 
-Tuning parameters or model selection, how is that perfromed??????   
+Tuning parameters or model selection, how is that perfromed?
+the $\beta$'s are found with maximum likelihood estimation. (this is why we assume that the observations are independent of each other, I think.)
 
 Insight into the interpretation of the predicted model: torr man bør introdusere odds her. 
 
@@ -467,10 +469,6 @@ misclas_train
 Finding ROC-curve and AUC
 ```{r}
 library(pROC)
-library(ggplot2)
-#glm_ROC=roc(ctest[ ,1], diab.glm_prob, legacy.axces=TRUE)
-#ggroc(glm_ROC) + ggtitle("ROC curve")
-
 par(pty='s')
 glm_ROC = roc(ctest[ ,1], diab.glm_prob, plot=TRUE, legacy.axces=TRUE)
 glm_ROC
@@ -481,7 +479,6 @@ glm_ROC
 The area under the ROC curve, hence the AUC, is calcualed to be 0.8451
 
 
-egentlig står det i module pagene til M4 at man buker KNN når class boundaries er non-linear, kanskje de erdet her? er litt usikker på det egentlig. 
 
 
 
@@ -489,39 +486,62 @@ egentlig står det i module pagene til M4 at man buker KNN når class boundaries
 
 * one method from Module 8: Trees (and forests)
 
-We choos to use random forest to analyse the data. 
+We choose to use bagging on a classification tree to analyse the data. 
 
-Write out themodel: det er jo litt vanskelig når det er en forest?? 
+Write out the model: det er jo litt vanskelig når det er flere trær, men man kan lage et oversiktstre vha Gini-index. ?? =variance importance plot. ?
+
 Model assumptions: 
-Tuning parameters: m=ant predictorer som averages over i hver split. m=sqrt(p), ca. Og antall trær, må være stor nok til at erroren har flatet ut.
-velger derfor m=2 eller 3
+independent observations
+
+
+Tuning parameters or model selection: 
+tuning: antall trær, må være stor nok til at erroren har flatet ut. ofte 300 eller 500. dette er forrresten ikke regarded as a tuning parameter.
+model selcetion????
+
 Insight into the interpretation of the fitted model:
+kan lage det oversiktstreet= variable importance plot that show the relative importance of each predictor. this means that the predictors are sorted based on their importance. Therefor the more important predictors are placed further up in the tree than the less important ones. 
+
 Evaluation of the model:
 ```{r}
 library(randomForest)
 set.seed(1)
-#diab.rf = randomForest(diabetes ~ ., data=ctrain, mtry=3, ntree=100, importance=TRUE) #dårig ide, dette funker jo ikke. 
-#diab.rf$confusion
-diab.bagging=randomForest(diabetes ~ ., data = ctrain, mtry=7, ntree=500, importance=TRUE)
-diab.bagging$confusion
-
-#set.seed(1)
-#bag = randomForest(clinically.important.brain.injury ~ ., data = headInjury2, 
- #   subset = train, mtry = 10, ntree = 500, importance = TRUE)
-#bag$confusion
-  
-#  rf = randomForest(clinically.important.brain.injury ~ ., data = headInjury2, 
-#    subset = train, mtry = 3, ntree = 500, importance = TRUE)
-
+diab.bagging=randomForest(diabetes ~ ., data = ctrain, mtry=8, ntree=500, importance=TRUE)
+plot(diab.bagging)
 
 ```
 
+Misclassification rate for the test data
+```{r}
+diab.bag_prob=predict(diab.bagging, newdata=ctest, type="response")
+diab.bag_pred=ifelse(diab.bag_prob>0.5, 1, 0)
+conf_test_bagging=table(diab.bag_pred, ctest$diabetes)
+conf_test_bagging
+misclass_test_bagging = (232-sum(diag(conf_test_bagging)))/232
+misclass_test_bagging 
 
+```
 
+Misclassification rate for the training set
+```{r}
+#diab.bag_train_prob=diab.bagging$predicted
+bagging_train_pred=ifelse(diab.bagging$predicted > 0.5, 1, 0)
+conf_train_bagging=table(bagging_train_pred, ctrain$diabetes)
+conf_train_bagging
+misclas_train_bagging = (300- sum(diag(conf_train_bagging)))/300
+misclas_train_bagging
 
+```
 
+ROC curve and AUC
+```{r}
+library(pROC)
 
+par(pty='s')
+bagging_ROC = roc(ctest[ ,1], diab.bag_prob, plot=TRUE, legacy.axces=TRUE)
+bagging_ROC
 
+```
+The $AUC$ is $0.8288$. 
 
 
 * one method from Module 9: Support vector machines and, finally
