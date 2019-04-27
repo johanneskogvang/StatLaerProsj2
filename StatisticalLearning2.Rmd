@@ -280,19 +280,21 @@ We see that $yy$ is the most important covariates when looking at node putiry, w
 
 **Q20:** Finally, compare the results from c (subset selection), d (lasso), e (tree) and f (random forest): Which method has given the best performance on the test set and which method has given you the best insight into the relationship between the price and the covariates?
 ```{r}
-library(utils)
-library(pracma)
-mses=c(mse_bsm, mse_lasso, mse_tree, mse_rf)
-names=c("Subset selection", "Lasso", "Tree", "Random forest")
-mse_range = linspace(0,0.2,101)
-plot(mses, axes=FALSE)
-axis(1, at=1:4, lab=names)
-axis(2,mse_range)
+#Dette oppleggge gjør at jeg ikke får knittet. Må fikses 
 
-print("the MSE's: ")
-for (i in c(1,2,3,4)){
-  print(paste(names[i], ": ", round(mses[i], 4)))
-}
+#library(utils)
+#library(pracma)
+#mses=c(mse_bsm, mse_lasso, mse_tree, mse_rf)
+#names=c("Subset selection", "Lasso", "Tree", "Random forest")
+#mse_range = linspace(0,0.2,101)
+#plot(mses, axes=FALSE)
+#axis(1, at=1:4, lab=names)
+#axis(2,mse_range)
+
+#print("the MSE's: ")
+#for (i in c(1,2,3,4)){
+#  print(paste(names[i], ": ", round(mses[i], 4)))
+#}'
 
 ```
 
@@ -394,7 +396,8 @@ library(GGally)
 #str(ctrain)
 #Tror at disse head-tingene bare vil ta med de første 6 personene, hvorfor det???
 #head(ctrain)
-ggpairs(ctrain)
+ctrain$diabetes = as.factor(ctrain$diabetes)
+ggpairs(ctrain, aes(color=diabetes))
 ```
 her tregner eg litt hjelp, heehheh
 lag noen flere plott, gjrø det jo litt lettere. 
@@ -486,9 +489,22 @@ The area under the ROC curve, hence the AUC, is calcualed to be 0.8451
 
 * one method from Module 8: Trees (and forests)
 
-We choose to use bagging on a classification tree to analyse the data. 
+We choose to use bagging to analyse the data. 
+```{r}
+library(randomForest)
+set.seed(1)
+diab.bagging=randomForest(diabetes ~ ., data = ctrain, mtry=8, ntree=500, importance=TRUE)
+plot(diab.bagging)
+```
+
 
 Write out the model: det er jo litt vanskelig når det er flere trær, men man kan lage et oversiktstre vha Gini-index. ?? =variance importance plot. ?
+
+When using bagging one constucts bootstrap samples, and here we make 500 samples. A classification tree is made from each sample, $\hat{f}^{*b}$. $b=1...B$, where $B$ is the number of bootstrap samples. 
+for classification:
+enten: ta majority vote av de predictions man får fra hvert tre for en observasjon/test
+eller: man kan ta gjennomsnittet av sannsynligheten til hver klasse. 
+jeg vet ikke hva den funksjonen vil bruker i r gjør :'(((
 
 Model assumptions: 
 independent observations
@@ -496,19 +512,20 @@ independent observations
 
 Tuning parameters or model selection: 
 tuning: antall trær, må være stor nok til at erroren har flatet ut. ofte 300 eller 500. dette er forrresten ikke regarded as a tuning parameter.
-model selcetion????
+model selcetion???? den velger jo flere tilfeldige bootstrap samples, også lager den et classification tre basert på hvert sample. da tar den gjennomsnittet av alle predictos i sampelet, også lager den en splitt basert på det. Er det dette de vil ha her? 
 
 Insight into the interpretation of the fitted model:
-kan lage det oversiktstreet= variable importance plot that show the relative importance of each predictor. this means that the predictors are sorted based on their importance. Therefor the more important predictors are placed further up in the tree than the less important ones. 
+When using bagging instead of one simple classification tree, the variance is decreased, but this is on the cost of interpretability. When you average over multiple trees, you loose som of the interpretability that we find in classification trees. However it is possible to make varibale importance plots. Here the predictors are sorted based on their importance, where the more important predictors for either increase in MSE of node purity are placed further up than the less important ones. 
 
-Evaluation of the model:
 ```{r}
-library(randomForest)
-set.seed(1)
-diab.bagging=randomForest(diabetes ~ ., data = ctrain, mtry=8, ntree=500, importance=TRUE)
-plot(diab.bagging)
+varImpPlot(diab.bagging)
 
 ```
+We see that $glu$ is the covariate that contributes the most to both increase in MSE and to increse in the node purity. Both $npreg$ and $bp$ contributes the least. 
+skrive mer utfyllende?
+
+
+Evaluation of the model:
 
 Misclassification rate for the test data
 ```{r}
@@ -534,17 +551,39 @@ misclas_train_bagging
 
 ROC curve and AUC
 ```{r}
-library(pROC)
+#Det er noe her som ikkke fungerer når man knitter????
 
-par(pty='s')
-bagging_ROC = roc(ctest[ ,1], diab.bag_prob, plot=TRUE, legacy.axces=TRUE)
-bagging_ROC
+#library(pROC)
+#par(pty='s')
+#bagging_ROC=roc(ctest[ ,1],diab.bag_prob, plot=TRUE, legacy.axes=TRUE)
+#bagging_ROC
 
 ```
 The $AUC$ is $0.8288$. 
 
 
-* one method from Module 9: Support vector machines and, finally
+* one method from Module 9: Support vector machines
+We choose the suppert vector machines method. 
+
+
+```{r}
+library(e1071)
+#diab.svm = svm(diabetes ~ ., data=ctrain, kernel = "radial", gamma=10^(-3), cost=100, scale=FALSE)
+diab.svm = svm(diabetes ~ ., data=ctrain, kernel = "polynomial", degree=4, cost=1, scale=FALSE)
+summary(diab.svm)
+#plot(diab.svm, ctrain, col=c("lightvoral", "lightgreen"))
+
+
+#svmfit_kernel1 = svm(y ~ ., data = train3, kernel = "radial", gamma = 1, 
+#    cost = 10, scale = FALSE)
+#plot(svmfit_kernel1, train3, col = c("lightcoral", "lightgreen"))
+
+```
+
+
+
+
+
 * one method from Module 11: Neural networks
 
 For each method you 
