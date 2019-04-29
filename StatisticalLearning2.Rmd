@@ -55,7 +55,13 @@ hist(dtrain$logprice)
 
 fit_price = lm(price ~ .-logprice, data=dtrain)
 rresprice = rstudent(fit_price)
+```
 
+Looking at the histograms of price frequency for the `price` and `logprice` response variable, we see that while the `price` variable have much higher frequenies at lower values, the `logprice` variable is more evenly and symertically distributed for different values. We then want to use `logprice` as our response variable to more easily observe nuances in the data set. 
+We can observe the same by looking at Boxcox and residual plots for `price`and `logprice`. 
+
+
+```{r plott2}
 library(ggplot2)
 # residuls vs fitted
 ggplot(fit_price, aes(.fitted, .stdresid)) + geom_point(pch = 21) +
@@ -84,14 +90,20 @@ boxcox(fit_logprice, plotit=TRUE)
 ```
 We see that in the BoxCox plots, the lambda value at maximum log-likelihood is closer to one for the logprice than for price. When lambda is close to one it means that one should use the model that is plotted. Also, we want the residuals to be independent of each other, meaning they are randomly spread and that we do not see a pattern in the residual plot. We also we want their variance to be constant. Therefore we choose to use the logprice as responce variable. 
 
+We now plot `logprice` with `carat`, `logcarat`, `color`, `clarity` and `cut`.
+
 ```{r }
-plot(dtrain$logprice, dtrain$carat)
-plot(dtrain$logprice, dtrain$logcarat)
-plot(dtrain$logprice, dtrain$clarity)
-plot(dtrain$logprice, dtrain$cut)
+plot(dtrain$carat, dtrain$logprice, main = 'Carat vs logprice')
+plot(dtrain$logcarat, dtrain$logprice, main = 'Logcarat vs logprice')
+plot(dtrain$clarity, dtrain$logprice, main = 'Clarity vs logprice')
+plot(dtrain$cut, dtrain$logprice, main = 'Cut vs logprice')
 ```
 
+From both the plot with `carat` and `logcarat` we observe a clear indication that higher carat leads to a higher price, which is expected. The relation between `logcarat` and `logprice` seems to be linear, which indicates that the price grows linearly with the carat. 
 
+The relation between `logprice`and `clarity` is less apparent. Looking at the medians and the mid 50 percentiles, is seems as though the price decreses with better clarity, which is counterintuitive. We do however, observe that many outliers in the most extreme observations, and that the whiskers for most of the clarities cover mostly the entire price range. This indicates that the clarity has little influence on the diamond price. 
+
+Some of the same is observable in the plot between `cut` and `logprice`, where the whiskersof the boxplots covers most of the price range for all cuts. 
 
 Use the local regression model $\texttt{logprice} = \beta_0 + \beta_1 \texttt{carat}+ \beta_2 \texttt{carat}^2$ weighted by the tricube kernel $K_{i0}$. 
 
