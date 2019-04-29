@@ -495,6 +495,7 @@ library(randomForest)
 set.seed(1)
 diab.bagging=randomForest(diabetes ~ ., data = ctrain, mtry=8, ntree=500, importance=TRUE)
 plot(diab.bagging)
+#summary(diab.bagging)
 ```
 
 
@@ -563,21 +564,45 @@ The $AUC$ is $0.8288$.
 
 
 * one method from Module 9: Support vector machines
-We choose the suppert vector machines method. 
+We choose the support vector machines method. 
 
 
 ```{r}
 library(e1071)
-#diab.svm = svm(diabetes ~ ., data=ctrain, kernel = "radial", gamma=10^(-3), cost=100, scale=FALSE)
-diab.svm = svm(diabetes ~ ., data=ctrain, kernel = "polynomial", degree=4, cost=1, scale=FALSE)
-summary(diab.svm)
-#plot(diab.svm, ctrain, col=c("lightvoral", "lightgreen"))
+set.seed(2)
+CV_radial = tune(svm, diabetes ~ ., data=ctrain, kernel="radial", ranges=list(gamma=c(10^-5, 10^-4,0.001,0.01,0.1,1,2,3,4,5), cost=c(0.001, 0.01, 0.1, 1, 5, 10, 20,40,80,100,120,140,160)))
+#summary(CV_radial)
+#best: gamma=0.001, cost=5
+svm_best_model=CV_radial$best.model
+summary(svm_best_model)
+
+#Finding miclassification rate for the test set:
+svm_prob_test=predict(svm_best_model, newdata=ctest, type="response")
+svm_pred_test=ifelse(svm_prob_test>0.5, 1, 0)
+conf_test_svm=table(svm_pred_test, ctest$diabetes)
+conf_test_svm
+misclas_test_svm=(232-sum(diag(conf_test_svm)))/232
+print("Misclassification rate for the test data: ")
+misclas_test_svm 
+
+#Finding the misclassification rate for the training set:
+svm_train_prob=predict(svm_best_model, newdata=ctrain, type="response")
+svm_train_pred=ifelse(svm_train_prob>0.5, 1, 0)
+conf_train_svm=table(svm_train_pred, ctrain$diabetes) #Her skjer det noe feil????
+conf_train_svm
+misclass_train_svm=(300-sum(diag(conf_train_svm)))/300
+print("Misclassification rate for the train set: ")
+misclass_train_svm
 
 
-#svmfit_kernel1 = svm(y ~ ., data = train3, kernel = "radial", gamma = 1, 
-#    cost = 10, scale = FALSE)
-#plot(svmfit_kernel1, train3, col = c("lightcoral", "lightgreen"))
 
+
+
+bagging_train_pred=ifelse(diab.bagging$predicted > 0.5, 1, 0)
+conf_train_bagging=table(bagging_train_pred, ctrain$diabetes)
+conf_train_bagging
+misclas_train_bagging = (300- sum(diag(conf_train_bagging)))/300
+misclas_train_bagging
 ```
 
 
