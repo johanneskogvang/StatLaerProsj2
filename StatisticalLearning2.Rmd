@@ -24,6 +24,7 @@ install.packages("glmnet")# for lasso
 install.packages("tree") #tree
 install.packages("randomForest") #for random forest
 install.packages("ElemStatLearn") #dataset in Problem 2
+install.packages("ggdendro")
 BiocManager::install(c("pheatmap")) #heatmap in Problem 2
 ```
 
@@ -312,7 +313,7 @@ library(ElemStatLearn)
 X=t(nci) #n times p matrix
 ngroups=length(table(rownames(X)))
 cols=rainbow(ngroups)
-cols[c(4,5,7,8,14)] = "black"
+cols[c(4,5,7,8,19)] = "black"
 pch.vec = rep(4,14)
 pch.vec[c(4,5,7,8,14)] = 15:19
 
@@ -332,15 +333,19 @@ plot(1:dim(X)[2],pca$rotation[,1],type="l",xlab="genes",ylab="weight",main="Firs
 ```
 
 
-**Q22:** The plot "First eigenvector" shows the weights of the first eigenvector of $\hat{\bf{R}}$ which is also the first principal component. The reason why there is only $n=64$ principal component is that there can not be more principal components than the rank of $\bf{X}$. This is because all the principal components are linearly independent, and thus the number of principal components (which is the eigenvectors of $\hat{\bf{R}}$) is bounded by the rank of $X$ which is maximally $n - 1=63$ (reduces to $n-1$ because of the centering). As seen from **Q21**, the score is directly related to a given principal component, so the number of component scores is always the same as the number of principle components.
+**Q22:** The plot "First eigenvector" shows the weights of the first eigenvector of $\hat{\bf{R}}$ which is also the first principal component. The reason why there is only $64$ principal component is that there can not be more principal components than the rank of $\bf{X}$. This is because all the principal components are linearly independent, and thus the number of principal components (which is the eigenvectors of $\hat{\bf{R}}$) is bounded by the rank of $X$ which is maximally $n - 1=64$ (reduces to $n-1$ because of the centering). The rank is actually $min(n-1, p)$, but because p is very large in our case it is obviously $n-1$. As seen from **Q21**, the score is directly related to a given principal component, so the number of component scores is always the same as the number of principle components.
 
 **Q23:** The proportion of variance explained by a single principle component is calculated as 
 $$\text{PVE}=\frac{\text{variance explained by }m\text{th component}}{\text{total variance}} = \frac{\frac{1}{n}\sum_{i=1}^{n}(\sum_{j = 1}^{p} \phi_{jm}z_{ij})^2}{\frac{1}{n}\sum_{j=1}^{p}\sum_{i=1}^{n}z_{ij}}.$$
 From this formula it is also easy to see that the total variance `sum(pca$sdev^2=p)`. The total variance defined above is the same as the sum of the variances of the columns of $\bf{Z}$ which is $p$ because they are standardized and thus every column has variance $1^2=1$. An easier way of computing the proportion of variance is to use the eigenvalues corresponding to the principle components. It can be shown that $\text{Var}(\phi_j) = \lambda_j$ and thus $$\text{PVE}=\frac{\lambda_m}{\sum_{j=1}^{p}\lambda_j}$$
 
-```{r proportion of variance}
+```{r proportion of variance plot}
 pve=100*pca$sdev^2/sum(pca$sdev^2)
 plot(cumsum(pve), type = "o", ylab = "Cumulative PVE", xlab = "Principal component", col="brown3")
+
+```
+We can see from the plot that it takes about 30 principal components to explain 80% of the variance, we check for the different number of principal components to check this and find the exact answer.
+```{r proportion of variance}
 
 totvar = sum(pca$sdev^2)
 pve32=sum(pca$sdev[1:32]^2)/totvar
@@ -350,25 +355,39 @@ pve31 = sum(pca$sdev[1:31]^2)/totvar
 cat("The first 31 principal components explains", pve31 * 100, "% of the variance and 32 principal components explains", pve32 * 100, "% of the variance. Thus we need 32 principal components to explain 80% of the variance in the data.")
 ```
 
-**Q24**: From the plot above, plotting PC1 agianst PC2, the most obvious clustering is the blue clustering, where the genes are from `MELANOMA` cancer tumors. The green `LEUKEMIA` genes are also easy to seperate from the others, and so are genes from `COLON` cancer tumors. We observe that the genes from other cancer types are mostly located in the left upmost corner and is for the most grouped together. The exeption is the genes from the breast cancer tumor, which are not clustered together at all and is spread around the whole plot. 
+**Q24**: From the plot above, plotting PC1 agianst PC2, the most obvious clustering is the blue clustering, where the genes are from `MELANOMA` cancer tumors. The green `LEUKEMIA` genes are also easy to seperate from the others, and so are genes from `COLON` cancer tumors. We observe that the genes from other cancer types are mostly located in the left upmost corner and are also, to some degree, clustered. The exeption is the genes from the breast cancer tumor, which are not clustered together at all and is spread around the whole plot. 
   It is known that the `K562` samples are leukemia cells and we can see from the plot that they are clustered together with the other leukemia samples. The breast cancer samples `MCF7` is harder to say something about because the other breast cancer samples are also spread widely around. The unknown sample is laying in the upper left corner, so it could belong to any of those group really. The most likely cancer type is although `NSCLC` or `OVARIAN` because the closest points are of those types.
 
-We plot a couple of other projections of the data onto the principal components to see if we find other interesting relationships. It is mostly interesting to look at the fist principal comonents, because it is in those that contains the most variations. It could have been interesting to find plots where the breast cancer cells are clustered together, but this was very hard to do. Below two other pairs of principal components are plotted together. In the first plot we see PC1 agianst PC3 and here we also see that green and yellow are clustered together and in the second we see the blue points clustered clearly together. After plotting several principal components, we see that it is easy to separate the blue, green and yellow points, but other than that it is hard to find PCs clearly separating other colors.
+We plot a couple of other projections of the data onto the principal components to see if we find other interesting relationships. It is mostly interesting to look at the fist principal comonents, because it is in those that contains the most variance. It could have been interesting to find plots where the breast cancer cells are clustered together or find a relation for the unknown sample, but this turned out to be very hard to do. Below two other pairs of principal components are plotted together. In the first plot we see PC1 agianst PC3 and here we also see that green and yellow are clustered, and again the remaining cancer types are slightly clustered and also here it is hard to find a relation between the cases of breast cancer. Although we see here that the `MFC7` samples of breast cancer is a bit more separated from the cluster of `COLON` cases and is still closely associated with a breast cancer case. This is shown even more clearly by plotting PC3 against PC4 as shown below. The `UNKNOWN` sample was hard to classify no matter what combination we tried, and because of this we conclude that it is most probable that it belongs to one of the cancer types that is hard to separate from the others. Our strongest hypothesis is that it belongs to the `NSCLC` type.
+
+
 
 ```{r}
-plot(pca$x[,1],pca$x[,3],xlab="PC1",ylab="PC3",pch=pchsamples,col=colsamples)
+plot(pca$x[,1],pca$x[,2],xlab="PC1",ylab="PC2",pch=pchsamples,col=colsamples)
 legend("bottomright",legend = colsvsnames[,2],cex=0.55,col=cols,pch = pch.vec)
 
-plot(pca$x[,2],pca$x[,4],xlab="PC2",ylab="PC4",pch=pchsamples,col=colsamples)
-legend("bottomright",legend = colsvsnames[,2],cex=0.55,col=cols,pch = pch.vec)
+plot(pca$x[,1],pca$x[,3],xlab="PC1",ylab="PC3",pch=pchsamples,col=colsamples)
+legend("bottomleft",legend = colsvsnames[,2],cex=0.55,col=cols,pch = pch.vec)
+
+plot(pca$x[,3],pca$x[,4],xlab="PC3",ylab="PC4",pch=pchsamples,col=colsamples)
+legend("bottomleft",legend = colsvsnames[,2],cex=0.55,col=cols,pch = pch.vec)
 ```
 
 
-**Q25:**: Explain what it means to use Euclidean distance and average linkage for hierarchical clustering. 
+**Q25:**: A hierarchical clustering algorithm starts with dividing all elements into it's own cluster and iteratively merges the closest clusters to bigger clusters. It then has to be decided how one can say which clusters are nearer than other when the dimensions grow larger than two. The point's positions are defined by a vector of the values of the covariates and thus we can use a norm to express the distance between two points. The most common norm is the 2-norm (also called Eucledian distance) and for deciding the distance between two clusters there is also several choices. There are 3 common methods, where average linkage is calculating the mean position of each cluster and calculating the distance between these two points.
 
 **Q26:**: Perform hierarchical clustering with Euclidean distance and average linkage on the scaled gene expression in `Z`. Observe where our samples labelled as K562, MCF7 and `UNKNOWN` are placed in the dendrogram. Which conclusions can you draw from this?
+```{r q26}
+library(ggplot2)
+library(ggdendro)
 
-**Q27:**: Study the R-code and plot below. Here we have performed hierarchical clustering based on thefirst 64 principal component instead of the gene expression data in `Z`. What is the difference between using all the gene expression data and using the first 64 principal components in the clustering? We have plotted the dendrogram together with a heatmap of the data. Explain what is shown in the heatmap. What is given on the horizontal axis, vertical axis, value in the pixel grid?
+ggdendrogram(hclust(dist(Z), method = "average"))+labs(title="Hierarchical clustering")
+
+```
+From the Hierarchical clustering preformed above we can observe how the algorithm places the samples compared to the well known samples. We start by looking at the `K562`samples and see that they are clustered together with `LEUKEMIA` as expected. The Hierarchical clustering as, as we did in **Q24**, struggels with clustering the `BREAST` samples together, but in the same way we saw it classifies the `MCF7` samples closest to two `BREAST` samples. The `UNKNOWN` sample is by the algorithm nearest to `OVERIAN` samples and not `NSCLC` as we suspected. But we do get confirmed that `NSCLC` is somewhat randomely spread, so the basis of our suspicion is well grounded, we just did not belive that the sample was closer to the `OVERIAN` samples.
+
+
+**Q27:**: In the plot below it is preformed hierarchical clustering based on the principal components. This means that the point's positions are based on the values when the vector are multiplied with the principal components. This means that the clusterings are based on vectors of length 64 in stead of 6830. One entry of the heat map grid shows the value of a PCA multiplied with the gene composition vector of a sample. The horizontal axis is the PCAs sorted by the amount of variation explained in the data from most to less. On the vertical axis is the covariates sorted by the hierchial clustering algorithm.
 
 ```{r}
 library(pheatmap)
