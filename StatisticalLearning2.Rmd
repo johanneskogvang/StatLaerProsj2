@@ -24,6 +24,7 @@ install.packages("glmnet")# for lasso
 install.packages("tree") #tree
 install.packages("randomForest") #for random forest
 install.packages("ElemStatLearn") #dataset in Problem 2
+install.packages("ggdendro")
 BiocManager::install(c("pheatmap")) #heatmap in Problem 2
 ```
 
@@ -43,6 +44,7 @@ install.packages("MASS")
 all=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/diamond.dd")
 dtrain=all$dtrain
 dtest=all$dtest
+
 ```
 
 **Q1**: Would you choose `price` or `logprice` as response variable? Justify your choice. Next, plot your choice of response pairwise with `carat`, `logcarat`, `color`, `clarity` and `cut`. Comment.
@@ -116,7 +118,7 @@ fit = loess(logprice ~ carat, data=dtrain, span=.2 )
 ```
 
 **Q3:** What choice of $\beta_1$, $\beta_2$ and $K_{i0}$ would result in KNN-regression?  
-In local regression we have $\hat{f} = \beta_0+\beta_1 x_i+\beta_2x_i^2 $, while for KNN-regression this $\hat{f}$ is konstant equal to the mean of the observations in the neighbourhood. Hence, for this to be the KNN-regression we have $ \beta_1 = \beta_2 = 0$. Also, we want $K_{i0}$ equal to one for the observations in the neighbourhood, and zero for the ones outside. 
+In local regression we have $\hat{f}=\beta_0+\beta_1 x_i+\beta_2x_i^2$, while for KNN-regression this $\hat{f}$ is konstant equal to the mean of the observations in the neighbourhood. Hence, for this to be the KNN-regression we have $ \beta_1 = \beta_2 = 0$. Also, we want $K_{i0}$ equal to one for the observations in the neighbourhood, and zero for the ones outside. 
 
 **Q4:** Describe how you can perform model selection in regression with AIC as criterion.  
 When we perform model selection in regression with AIC as the criterion, we perform a best subset selcetion, and choose the set of covariates that produce the lowest AIC value. 
@@ -128,11 +130,20 @@ The full procedure when one has a model depending on $k$ covariates is as follow
 $$\text{AIC} = \frac{\text{SSE}/n}{\hat{\sigma^2}} + 2\frac{p}{n}$$
 where $n$ is the number of observations and $p$ is the number of selected covariates in the given model. 
 
-**Q5:** What are the main differences between using AIC for model selection and using cross-validation (with mean squared test error MSE)?  
+**Q5:** What are the main differences between using AIC for model selection and using cross-validation (with mean squared test error MSE)?
 
 Cross-validation is in general more computationally expensive than model selection with AIC, however, this is rearly considered a problem with today's computers. Cross-validation also measures the test error directly, instead of adjusting the training error for model size, as the AIC does. Finally, cross-validation makes fewer assumptions about the underlying model. Cross-validation does not directly punish models with many covariates; if two models with different complexity produces the same test error, cross-validation will do nothing to choose the less complex model. 
 
-**Q6:** See the code below for performing model selection with `bestglm()` based on AIC. What kind of contrast is used to represent `cut`, `color` and `clarity`? Write down the final best model and explain what you can interpret from the model.  
+**Q6:** See the code below for performing model selection with `bestglm()` based on AIC. What kind of contrast is used to represent `cut`, `color` and `clarity`? Write down the final best model and explain what you can interpret from the model.    
+
+To represent `cut`, the `fair cut` is removed and used as a reference. This means that if the cut goes from 'fair' to 'good' and no other covariates has changed, then the price is $\beta_{cutGood} =  0.028558$ higher. The same holds for `color` and `clairity`, where `colorD` and `clarityI1` are used as reference values. 
+
+Looking at the summary of the `best subset model`, one can see that the best model is 
+$$ logprice = \beta_{logcarat}x_{logcarat} + \beta_{cutGood}x_{cutGood} + \beta_{cutVeryGood}x_{cutVeryGood} +\beta_{cutPremium}x_{cutPremium} + \beta_{cutIdeal}x_{cutIdeal} \\ 
++ \beta_{colorE}x_{colorE} + \beta_{colorF}x_{colorF} + \beta_{colorG}x_{colorG} + \beta_{colorH}x_{colorH} +  \beta_{colorI}x_{colorI} + \beta_{colorJ}x_{colorJ} \\
++ \beta_{claritySI2}x_{claritySI2} + \beta_{claritySI1}x_{claritySI1} + \beta_{clarityVS2}x_{clarityVS2} + \beta_{clarityVS1}x_{clarityVS1}\\
++ \beta_{clarityVVS2}x_{clarityVVS2} + \beta_{clarityVVS1}x_{clarityVVS1} + \beta_{clarityIF}x_{clarityIF} + \beta_{xx}x_{xx} $$
+The worst `cut` is used as a reference, therefor the $\beta$'s are positive, avd logprice will increase with a better cut. The same holds for `clarity`, while the best value is used for `color`, hence the $\beta$'s are negative. One can also see that the depth, table, witdth and depth are not included in this model. This could mean that the shape of the diamond isn't as important as the weight. All of the remainding covariates are significant. 
 
 **Q7:** Calculate and report the MSE of the test set using the best model (on the scale of `logprice`).  
 
@@ -144,40 +155,165 @@ ds=as.data.frame(within(dtrain,{
   price=NULL    # not include as covariate
   carat=NULL    # not include as covariate
   }))
-fit=bestglm(Xy=ds, IC="AIC")$BestModel
-summary(fit)
+fit_bsm=bestglm(Xy=ds, IC="AIC")$BestModel
+#summary(fit)
 
-predict(fit,1)
 
-#NB! dette svarer ikke på Q7!
-res_fit <- fit$residuals
-abs_res <- abs(res_fit)
-n <- length(res_fit)
-sum_res <- sum(abs_res**2)
-sum_res
-mse <- sum_res / n
-mse
+pred_bsm = predict(fit_bsm, newdata=dtest)
+mse_bsm = mean((dtest$logprice-pred_bsm)^2)
+mse_bsm
+
+```
+Using the best model, the MSE is calculatet to be $0.003600305$.
+
+
+**Q8:** Build a model matrix for the covariates `~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1`. What is the dimension of this matrix?  
+```{r}
+#tar -1 fordi vi ikke il ha med intercept i lasso. vil ikke at den coariaten skal bli null. 
+x_train = model.matrix(logprice~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1, data=dtrain)
+dim(x_train)
+
+```
+The dimension of this matrix is $5000 \times 24$. 
+
+
+**Q9:** Fit a lasso regression to the diamond data with `logprice` as the response and the model matrix given in Q8. How did you find the value to be used for the regularization parameter?  
+```{r}
+y_train = dtrain$logprice
+library(glmnet)
+set.seed(1)
+cv.out = cv.glmnet(x_train,y_train,alpha=1)
+plot(cv.out)
+
+best_lambda_lasso = cv.out$lambda.min
+best_lambda_lasso
+
+#lager en modell med denne lambdaen
+fit_lasso = glmnet(x_train,y_train,alpha=1, lambda=best_lambda_lasso) 
 
 ```
 
-**Q8:** Build a model matrix for the covariates `~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1`. What is the dimension of this matrix?  
+We find the value to be used for the regularzation parameter, $\lambda$, using crossvalidation.  
 
-**Q9:** Fit a lasso regression to the diamond data with `logprice` as the response and the model matrix given in Q8. How did you find the value to be used for the regularization parameter?  
 
 **Q10:** Calculate and report the MSE of the test set (on the scale of `logprice`).  
+```{r}
+x_test = model.matrix(~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1, data=dtest)
+y_test = dtest$logprice
 
-**Q11:** A regression tree to model is built using a _greedy_ approach. What does that mean? Explain the strategy used for constructing a regression tree.  
-**Q12:** Is a regression tree a suitable method to handle both numerical and categorical covariates? Elaborate.  
-**Q13:** Fit a (full) regression tree to the diamond data with `logprice` as the response (and the same covariates as for c and d), and plot the result. Comment briefly on you findings.  
+lasso_predictions = predict(fit_lasso, newx = x_test)
+lasso_square_errors = ((lasso_predictions-y_test)^2)
+
+
+mse_lasso=mean(lasso_square_errors)
+mse_lasso
+```
+
+The MSE of the lasso regression is $0.00363693$, in the `logprice` scale.
+
+
+
+**Q11:** A regression tree to model is built using a _greedy_ approach. What does that mean? Explain the strategy used for constructing a regression tree. 
+When using a greedy approach one always take the locally best choice, not thinking about what happens next or in the big picture. When using a greedy approach constructing a regression tree, one will always make the best splis, meaning one will choose the split that reduces the RSS the most. 
+
+When constructing a regression tree one uses the top-down implementation with the greedy approach. One starts at the top where all observations belong to one single region. Then this region is split into two new branches, choosing the split with the highest reduction in the RSS. The next split in the tree is also the split that reduces the RSS the most, and so it continues untill the desired number of regions. All of these regions gets one prediction each, which is the mean of the training data that falls into that region. 
+
+
+
+**Q12:** Is a regression tree a suitable method to handle both numerical and categorical covariates? Elaborate. 
+Bare numerical siden man lager sliptsene selv? bruk heller classification tree til categorical??
+men martine sier at den er bra på begge. 
+
+**Q13:** Fit a (full) regression tree to the diamond data with `logprice` as the response (and the same covariates as for c and d), and plot the result. Comment briefly on you findings. 
+```{r}
+library(tree)
+tree.logprice = tree(logprice~logcarat+cut+clarity+color+depth+table+xx+yy+zz, data=dtrain)
+plot(tree.logprice)
+text(tree.logprice, pretty=1)
+
+
+
+```
+
 **Q14:** Calculate and report the MSE of the test set (on the scale of `logprice`).  
+```{r}
+tree_pred = predict(tree.logprice, newdata=dtest)
+mse_tree=mean((tree_pred - dtest$logprice)^2)
+mse_tree
 
-**Q15:** Explain the motivation behind bagging, and how bagging differs from random forest? What is the role of bootstrapping?  
+```
+The MSE of the regression tree is $0.01715548$.
+
+
+**Q15:** Explain the motivation behind bagging, and how bagging differs from random forest? What is the role of bootstrapping? 
+
+When we average over different observations, the variance is typically lower than for one single observation. One can use the bootstrap to find B repeated samples from the training data set, train each of the B sets, and then average on the trained models. This si called bootstrap aggregation og bagging, and will reduce the variance of the model. 
+
+This can typically be used in regression trees, since using one single tree will result in high variance. Then we get B bootstrapped trees that we average over. Random forest is similar to bagging, but instead of using each of the predictors when choosing a split, a smaller sample of the predictors are used. This is called decorrelation of the trees, and will lead to an even lower variance. (her kan man evt forklare hvorfor, mtp sterke prediktorer osv, men det er egentlig ikke en del av spørsmålet.)
+(har jeg svart nok på hva som er rollen til bootstrapping?)
+
+
+
 **Q16:** What are the parameter(s) to be set in random forest, and what are the rules for setting these?  
+In random forest one will have to choose the number of trees, B. A large B will not lead to overfitting, and therefore B is chosen sufficiently large to have the error rate settled. 
+
+The other parameter that needs to be set is the number of predictors used in each split, m. One typically choose $m \approx \sqrt{p}$, where $p$ is the number of predictors. Then the algorithm is no longer allowed to choose slpits based on the majority of the predictors. Then if one predictor is particulary strong, it will npt be at the top of the trees as often as it would if bagging was used. Hence, the other predictors stand a chance, and the trees are decorrelated. 
+
+
 **Q17:** Boosting is a popular method. What is the main difference between random forest and boosting?  
+The main difference between random forest and boosting is that in random forest each tree is constructed based on the bootstrapped sample from the training data, while in boosting the trees are build using the residuals, meaning that each tree is build using information from the previously built trees. This makes boosting an approach that learns slowly, which in general are approaches that perform well. 
+
+
+
 **Q18:** Fit a random forest to the diamond data with `logprice` as the response (and the same covariates as before). Comment on your choice of parameter (as decribed in Q16).   
+
+```{r}
+set.seed(300)
+library(randomForest)
+rf.logprice=randomForest(logprice~logcarat+cut+clarity+color+depth+table+xx+yy+zz, data=dtrain, mtry=3, ntree=300, importance=TRUE) #dette
+#default mtry=m er p/3 for regression, velger default. 
+plot(rf.logprice)
+
+#hva skal vi velge B til å være? Skal væreså høy at erroren er stabilisert, dvs høyere enn 200 en plass tror jeg. 
+# i følge module pages er B som regel 300 eller 500. 300 ser vel bst ut her. 
+
+```
+
 **Q19:** Make a variable importance plot and comment on the plot. Calculate and report the MSE of the test set (on the scale of `logprice`).  
+```{r}
+varImpPlot(rf.logprice, type = 2)
+rf.pred=predict(rf.logprice, newdata=dtest)
+mse_rf=mean((rf.pred-dtest$logprice)^2)
+mse_rf
+
+```
+
+We see that $yy$ is the most important covariates when looking at node putiry, while $cut$ seems to be the least important. The MSE of the random forest is $0.002828014$.
+
 
 **Q20:** Finally, compare the results from c (subset selection), d (lasso), e (tree) and f (random forest): Which method has given the best performance on the test set and which method has given you the best insight into the relationship between the price and the covariates?
+```{r}
+#Dette oppleggge gjør at jeg ikke får knittet. Må fikses 
+
+#library(utils)
+#library(pracma)
+#mses=c(mse_bsm, mse_lasso, mse_tree, mse_rf)
+#names=c("Subset selection", "Lasso", "Tree", "Random forest")
+#mse_range = linspace(0,0.2,101)
+#plot(mses, axes=FALSE)
+#axis(1, at=1:4, lab=names)
+#axis(2,mse_range)
+
+#print("the MSE's: ")
+#for (i in c(1,2,3,4)){
+#  print(paste(names[i], ": ", round(mses[i], 4)))
+#}'
+
+```
+
+We see that the tree has the clearly highest mse, and the random forest the best. skriv noe om relationship between price og covariates. 
+
+
 
 
 # Problem 2: Unsupervised learning [3 points]
@@ -189,7 +325,7 @@ library(ElemStatLearn)
 X=t(nci) #n times p matrix
 ngroups=length(table(rownames(X)))
 cols=rainbow(ngroups)
-cols[c(4,5,7,8,14)] = "black"
+cols[c(4,5,7,8,19)] = "black"
 pch.vec = rep(4,14)
 pch.vec[c(4,5,7,8,14)] = 15:19
 
@@ -209,15 +345,19 @@ plot(1:dim(X)[2],pca$rotation[,1],type="l",xlab="genes",ylab="weight",main="Firs
 ```
 
 
-**Q22:** The plot "First eigenvector" shows the weights of the first eigenvector of $\hat{\bf{R}}$ which is also the first principal component. The reason why there is only $n=64$ principal component is that there can not be more principal components than the rank of $\bf{X}$. This is because all the principal components are linearly independent, and thus the number of principal components (which is the eigenvectors of $\hat{\bf{R}}$) is bounded by the rank of $X$ which is maximally $n - 1=63$ (reduces to $n-1$ because of the centering). As seen from **Q21**, the score is directly related to a given principal component, so the number of component scores is always the same as the number of principle components.
+**Q22:** The plot "First eigenvector" shows the weights of the first eigenvector of $\hat{\bf{R}}$ which is also the first principal component. The reason why there is only $64$ principal component is that there can not be more principal components than the rank of $\bf{X}$. This is because all the principal components are linearly independent, and thus the number of principal components (which is the eigenvectors of $\hat{\bf{R}}$) is bounded by the rank of $X$ which is maximally $n - 1=64$ (reduces to $n-1$ because of the centering). The rank is actually $min(n-1, p)$, but because p is very large in our case it is obviously $n-1$. As seen from **Q21**, the score is directly related to a given principal component, so the number of component scores is always the same as the number of principle components.
 
 **Q23:** The proportion of variance explained by a single principle component is calculated as 
 $$\text{PVE}=\frac{\text{variance explained by }m\text{th component}}{\text{total variance}} = \frac{\frac{1}{n}\sum_{i=1}^{n}(\sum_{j = 1}^{p} \phi_{jm}z_{ij})^2}{\frac{1}{n}\sum_{j=1}^{p}\sum_{i=1}^{n}z_{ij}}.$$
 From this formula it is also easy to see that the total variance `sum(pca$sdev^2=p)`. The total variance defined above is the same as the sum of the variances of the columns of $\bf{Z}$ which is $p$ because they are standardized and thus every column has variance $1^2=1$. An easier way of computing the proportion of variance is to use the eigenvalues corresponding to the principle components. It can be shown that $\text{Var}(\phi_j) = \lambda_j$ and thus $$\text{PVE}=\frac{\lambda_m}{\sum_{j=1}^{p}\lambda_j}$$
 
-```{r proportion of variance}
+```{r proportion of variance plot}
 pve=100*pca$sdev^2/sum(pca$sdev^2)
 plot(cumsum(pve), type = "o", ylab = "Cumulative PVE", xlab = "Principal component", col="brown3")
+
+```
+We can see from the plot that it takes about 30 principal components to explain 80% of the variance, we check for the different number of principal components to check this and find the exact answer.
+```{r proportion of variance}
 
 totvar = sum(pca$sdev^2)
 pve32=sum(pca$sdev[1:32]^2)/totvar
@@ -227,25 +367,39 @@ pve31 = sum(pca$sdev[1:31]^2)/totvar
 cat("The first 31 principal components explains", pve31 * 100, "% of the variance and 32 principal components explains", pve32 * 100, "% of the variance. Thus we need 32 principal components to explain 80% of the variance in the data.")
 ```
 
-**Q24**: From the plot above, plotting PC1 agianst PC2, the most obvious clustering is the blue clustering, where the genes are from `MELANOMA` cancer tumors. The green `LEUKEMIA` genes are also easy to seperate from the others, and so are genes from `COLON` cancer tumors. We observe that the genes from other cancer types are mostly located in the left upmost corner and is for the most grouped together. The exeption is the genes from the breast cancer tumor, which are not clustered together at all and is spread around the whole plot. 
+**Q24**: From the plot above, plotting PC1 agianst PC2, the most obvious clustering is the blue clustering, where the genes are from `MELANOMA` cancer tumors. The green `LEUKEMIA` genes are also easy to seperate from the others, and so are genes from `COLON` cancer tumors. We observe that the genes from other cancer types are mostly located in the left upmost corner and are also, to some degree, clustered. The exeption is the genes from the breast cancer tumor, which are not clustered together at all and is spread around the whole plot. 
   It is known that the `K562` samples are leukemia cells and we can see from the plot that they are clustered together with the other leukemia samples. The breast cancer samples `MCF7` is harder to say something about because the other breast cancer samples are also spread widely around. The unknown sample is laying in the upper left corner, so it could belong to any of those group really. The most likely cancer type is although `NSCLC` or `OVARIAN` because the closest points are of those types.
 
-We plot a couple of other projections of the data onto the principal components to see if we find other interesting relationships. It is mostly interesting to look at the fist principal comonents, because it is in those that contains the most variations. It could have been interesting to find plots where the breast cancer cells are clustered together, but this was very hard to do. Below two other pairs of principal components are plotted together. In the first plot we see PC1 agianst PC3 and here we also see that green and yellow are clustered together and in the second we see the blue points clustered clearly together. After plotting several principal components, we see that it is easy to separate the blue, green and yellow points, but other than that it is hard to find PCs clearly separating other colors.
+We plot a couple of other projections of the data onto the principal components to see if we find other interesting relationships. It is mostly interesting to look at the fist principal comonents, because it is in those that contains the most variance. It could have been interesting to find plots where the breast cancer cells are clustered together or find a relation for the unknown sample, but this turned out to be very hard to do. Below two other pairs of principal components are plotted together. In the first plot we see PC1 agianst PC3 and here we also see that green and yellow are clustered, and again the remaining cancer types are slightly clustered and also here it is hard to find a relation between the cases of breast cancer. Although we see here that the `MFC7` samples of breast cancer is a bit more separated from the cluster of `COLON` cases and is still closely associated with a breast cancer case. This is shown even more clearly by plotting PC3 against PC4 as shown below. The `UNKNOWN` sample was hard to classify no matter what combination we tried, and because of this we conclude that it is most probable that it belongs to one of the cancer types that is hard to separate from the others. Our strongest hypothesis is that it belongs to the `NSCLC` type.
+
+
 
 ```{r}
-plot(pca$x[,1],pca$x[,3],xlab="PC1",ylab="PC3",pch=pchsamples,col=colsamples)
+plot(pca$x[,1],pca$x[,2],xlab="PC1",ylab="PC2",pch=pchsamples,col=colsamples)
 legend("bottomright",legend = colsvsnames[,2],cex=0.55,col=cols,pch = pch.vec)
 
-plot(pca$x[,2],pca$x[,4],xlab="PC2",ylab="PC4",pch=pchsamples,col=colsamples)
-legend("bottomright",legend = colsvsnames[,2],cex=0.55,col=cols,pch = pch.vec)
+plot(pca$x[,1],pca$x[,3],xlab="PC1",ylab="PC3",pch=pchsamples,col=colsamples)
+legend("bottomleft",legend = colsvsnames[,2],cex=0.55,col=cols,pch = pch.vec)
+
+plot(pca$x[,3],pca$x[,4],xlab="PC3",ylab="PC4",pch=pchsamples,col=colsamples)
+legend("bottomleft",legend = colsvsnames[,2],cex=0.55,col=cols,pch = pch.vec)
 ```
 
 
-**Q25:**: Explain what it means to use Euclidean distance and average linkage for hierarchical clustering. 
+**Q25:**: A hierarchical clustering algorithm starts with dividing all elements into it's own cluster and iteratively merges the closest clusters to bigger clusters. It then has to be decided how one can say which clusters are nearer than other when the dimensions grow larger than two. The point's positions are defined by a vector of the values of the covariates and thus we can use a norm to express the distance between two points. The most common norm is the 2-norm (also called Eucledian distance) and for deciding the distance between two clusters there is also several choices. There are 3 common methods, where average linkage is calculating the mean position of each cluster and calculating the distance between these two points.
 
 **Q26:**: Perform hierarchical clustering with Euclidean distance and average linkage on the scaled gene expression in `Z`. Observe where our samples labelled as K562, MCF7 and `UNKNOWN` are placed in the dendrogram. Which conclusions can you draw from this?
+```{r q26}
+library(ggplot2)
+library(ggdendro)
 
-**Q27:**: Study the R-code and plot below. Here we have performed hierarchical clustering based on thefirst 64 principal component instead of the gene expression data in `Z`. What is the difference between using all the gene expression data and using the first 64 principal components in the clustering? We have plotted the dendrogram together with a heatmap of the data. Explain what is shown in the heatmap. What is given on the horizontal axis, vertical axis, value in the pixel grid?
+ggdendrogram(hclust(dist(Z), method = "average"))+labs(title="Hierarchical clustering")
+
+```
+From the Hierarchical clustering preformed above we can observe how the algorithm places the samples compared to the well known samples. We start by looking at the `K562`samples and see that they are clustered together with `LEUKEMIA` as expected. The Hierarchical clustering as, as we did in **Q24**, struggels with clustering the `BREAST` samples together, but in the same way we saw it classifies the `MCF7` samples closest to two `BREAST` samples. The `UNKNOWN` sample is by the algorithm nearest to `OVERIAN` samples and not `NSCLC` as we suspected. But we do get confirmed that `NSCLC` is somewhat randomely spread, so the basis of our suspicion is well grounded, we just did not belive that the sample was closer to the `OVERIAN` samples.
+
+
+**Q27:**: In the plot below it is preformed hierarchical clustering based on the principal components. This means that the point's positions are based on the values when the vector are multiplied with the principal components. This means that the clusterings are based on vectors of length 64 in stead of 6830. One entry of the heat map grid shows the value of a PCA multiplied with the gene composition vector of a sample. The horizontal axis is the PCAs sorted by the amount of variation explained in the data from most to less. On the vertical axis is the covariates sorted by the hierchial clustering algorithm.
 
 ```{r}
 library(pheatmap)
@@ -253,21 +407,239 @@ npcs=64
 pheatmap(pca$x[,1:npcs],scale="none",cluster_col=FALSE,cluster_row=TRUE,clustering_distance_rows = "euclidean",clustering_method="average",fontsize_row=5,fontsize_col=5)
 ```
 
+
+
+
 # Problem 3: Flying solo with diabetes data [6 points]
 
 ```{r}
 flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
 ctrain=flying$ctrain
 ctest=flying$ctest
+summary(flying)
 ```
 
 **Q28:** Start by getting to know the _training data_, by producing summaries and plots. Write a few sentences about what you observe and include your top 3 informative plots and/or outputs.
+```{r}
+
+library(GGally)
+#summary(ctrain)
+#str(ctrain)
+#Tror at disse head-tingene bare vil ta med de første 6 personene, hvorfor det???
+#head(ctrain)
+ctrain$diabetes = as.factor(ctrain$diabetes)
+ggpairs(ctrain, aes(color=diabetes))
+```
+her tregner eg litt hjelp, heehheh
+lag noen flere plott, gjrø det jo litt lettere. 
+Correlation mellom skin og bmi. corr=0.64, pluss plottet ser korrelert ut. 
+kanskje correlation mellom ped og age?
+og bp og age??? ntjaaa
+kanskje npreg og age? ja. 
+
+
 
 **Q29:** Use different methods to analyse the data. In particular use 
 
-* one method from Module 4: Classification
+* one method from Module 4: Classification   
+We choose logistic regression since we only have two responce classes.
+```{r}
+diab.glm = glm(diabetes ~ ., data = ctrain, family = "binomial")
+summary(diab.glm)
+
+```
+When using logistic regression, the model is based on probabilities that $Y=1$. That means the pobability that a person has diabetes. 
+$$p(x_i)= p_i = \frac{e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}}
+{1+e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}}   $$ 
+One can also write this as 
+$$ log \frac{p_i}{1-p_i} = {{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}$$
+
+
+
+
+
+What are the model assumptions????? 
+finnes noen assumtions her: https://www.statisticssolutions.com/assumptions-of-logistic-regression/
+skjlnner ikke alt det som står der men.   
+en ting er i hvert fall: observations must be independent of each other. 
+bare to response classes. 
+
+
+Tuning parameters or model selection, how is that perfromed?
+the $\beta$'s are found with maximum likelihood estimation. (this is why we assume that the observations are independent of each other, I think.)
+
+Insight into the interpretation of the predicted model: torr man bør introdusere odds her. 
+
+
+
+
+Evaluation of the model:
+```{r}
+diab.glm_prob=predict(diab.glm, newdata=ctest, type="response")
+diab.glm_pred=ifelse(diab.glm_prob > 0.5, 1, 0)
+conf_test=table(diab.glm_pred, ctest$diabetes)
+conf_test
+misclass_test = (232-sum(diag(conf_test)))/232
+misclass_test
+
+#summary(diab.glm_prob)
+```
+
+
+If one appiles this model to the test data one can find the proporsion of mistakes that are made, called the misclassification test error rate. The misclassification test error rate is thus
+$$Test\,\, error = \frac{29+18}{232} = 0.2025862. $$
+We can also use the fitted model to find predictions for the training data and hence, finding the miscalsification training error rate.
+```{r}
+glm_train_prob=diab.glm$fitted.values
+glm_train_pred=ifelse(glm_train_prob>0.5, 1, 0)
+conf_train=table(glm_train_pred, ctrain$diabetes)
+conf_train
+misclas_train = (300 - sum(diag(conf_train)))/300
+misclas_train
+
+
+```
+
+Finding ROC-curve and AUC
+```{r}
+library(pROC)
+par(pty='s')
+glm_ROC = roc(ctest[ ,1], diab.glm_prob, plot=TRUE, legacy.axces=TRUE)
+glm_ROC
+
+
+```
+
+The area under the ROC curve, hence the AUC, is calcualed to be 0.8451
+
+
+
+
+
+
+
 * one method from Module 8: Trees (and forests)
-* one method from Module 9: Support vector machines and, finally
+
+We choose to use bagging to analyse the data. 
+```{r}
+library(randomForest)
+set.seed(1)
+diab.bagging=randomForest(diabetes ~ ., data = ctrain, mtry=8, ntree=500, importance=TRUE)
+plot(diab.bagging)
+#summary(diab.bagging)
+```
+
+
+Write out the model: det er jo litt vanskelig når det er flere trær, men man kan lage et oversiktstre vha Gini-index. ?? =variance importance plot. ?
+
+When using bagging one constucts bootstrap samples, and here we make 500 samples. A classification tree is made from each sample, $\hat{f}^{*b}$. $b=1...B$, where $B$ is the number of bootstrap samples. 
+for classification:
+enten: ta majority vote av de predictions man får fra hvert tre for en observasjon/test
+eller: man kan ta gjennomsnittet av sannsynligheten til hver klasse. 
+jeg vet ikke hva den funksjonen vil bruker i r gjør :'(((
+
+Model assumptions: 
+independent observations
+
+
+Tuning parameters or model selection: 
+tuning: antall trær, må være stor nok til at erroren har flatet ut. ofte 300 eller 500. dette er forrresten ikke regarded as a tuning parameter.
+model selcetion???? den velger jo flere tilfeldige bootstrap samples, også lager den et classification tre basert på hvert sample. da tar den gjennomsnittet av alle predictos i sampelet, også lager den en splitt basert på det. Er det dette de vil ha her? 
+
+Insight into the interpretation of the fitted model:
+When using bagging instead of one simple classification tree, the variance is decreased, but this is on the cost of interpretability. When you average over multiple trees, you loose som of the interpretability that we find in classification trees. However it is possible to make varibale importance plots. Here the predictors are sorted based on their importance, where the more important predictors for either increase in MSE of node purity are placed further up than the less important ones. 
+
+```{r}
+varImpPlot(diab.bagging)
+
+```
+We see that $glu$ is the covariate that contributes the most to both increase in MSE and to increse in the node purity. Both $npreg$ and $bp$ contributes the least. 
+skrive mer utfyllende?
+
+
+Evaluation of the model:
+
+Misclassification rate for the test data
+```{r}
+diab.bag_prob=predict(diab.bagging, newdata=ctest, type="response")
+diab.bag_pred=ifelse(diab.bag_prob>0.5, 1, 0)
+conf_test_bagging=table(diab.bag_pred, ctest$diabetes)
+conf_test_bagging
+misclass_test_bagging = (232-sum(diag(conf_test_bagging)))/232
+misclass_test_bagging 
+
+```
+
+Misclassification rate for the training set
+```{r}
+#diab.bag_train_prob=diab.bagging$predicted
+bagging_train_pred=ifelse(diab.bagging$predicted > 0.5, 1, 0)
+conf_train_bagging=table(bagging_train_pred, ctrain$diabetes)
+conf_train_bagging
+misclas_train_bagging = (300- sum(diag(conf_train_bagging)))/300
+misclas_train_bagging
+
+```
+
+ROC curve and AUC
+```{r}
+#Det er noe her som ikkke fungerer når man knitter????
+
+#library(pROC)
+#par(pty='s')
+#bagging_ROC=roc(ctest[ ,1],diab.bag_prob, plot=TRUE, legacy.axes=TRUE)
+#bagging_ROC
+
+```
+The $AUC$ is $0.8288$. 
+
+
+* one method from Module 9: Support vector machines
+We choose the support vector machines method. 
+
+
+```{r}
+library(e1071)
+set.seed(2)
+CV_radial = tune(svm, diabetes ~ ., data=ctrain, kernel="radial", ranges=list(gamma=c(10^-5, 10^-4,0.001,0.01,0.1,1,2,3,4,5), cost=c(0.001, 0.01, 0.1, 1, 5, 10, 20,40,80,100,120,140,160)))
+#summary(CV_radial)
+#best: gamma=0.001, cost=5
+svm_best_model=CV_radial$best.model
+summary(svm_best_model)
+
+#Finding miclassification rate for the test set:
+svm_prob_test=predict(svm_best_model, newdata=ctest, type="response")
+svm_pred_test=ifelse(svm_prob_test>0.5, 1, 0)
+conf_test_svm=table(svm_pred_test, ctest$diabetes)
+conf_test_svm
+misclas_test_svm=(232-sum(diag(conf_test_svm)))/232
+print("Misclassification rate for the test data: ")
+misclas_test_svm 
+
+#Finding the misclassification rate for the training set:
+svm_train_prob=predict(svm_best_model, newdata=ctrain, type="response")
+svm_train_pred=ifelse(svm_train_prob>0.5, 1, 0)
+conf_train_svm=table(svm_train_pred, ctrain$diabetes) #Her skjer det noe feil????
+conf_train_svm
+misclass_train_svm=(300-sum(diag(conf_train_svm)))/300
+print("Misclassification rate for the train set: ")
+misclass_train_svm
+
+
+
+
+
+bagging_train_pred=ifelse(diab.bagging$predicted > 0.5, 1, 0)
+conf_train_bagging=table(bagging_train_pred, ctrain$diabetes)
+conf_train_bagging
+misclas_train_bagging = (300- sum(diag(conf_train_bagging)))/300
+misclas_train_bagging
+```
+
+
+
+
+
 * one method from Module 11: Neural networks
 
 For each method you 
