@@ -431,11 +431,15 @@ ctest=flying$ctest
 **Q28:** Start by getting to know the _training data_, by producing summaries and plots. Write a few sentences about what you observe and include your top 3 informative plots and/or outputs.
 ```{r}
 
+flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
+ctrain=flying$ctrain
+ctest=flying$ctest
+
 library(GGally)
-#summary(ctrain)
-#str(ctrain)
+summary(ctrain) #gir info om vanlige verdier for kovariatene
+str(ctrain) #en kompkt måte å se hvordan datasettet ser ut 
 #Tror at disse head-tingene bare vil ta med de første 6 personene, hvorfor det???
-#head(ctrain)
+head(ctrain) #viser den første delen av dataframen 
 ctrain$diabetes = as.factor(ctrain$diabetes)
 ggpairs(ctrain, aes(color=diabetes))
 ```
@@ -446,7 +450,7 @@ kanskje correlation mellom ped og age?
 og bp og age??? ntjaaa
 kanskje npreg og age? ja. 
 
-
+Include pair plot to investigate for collinearity. 
 
 **Q29:** Use different methods to analyse the data. In particular use 
 
@@ -456,8 +460,8 @@ $$p(x_i)= p_i = \frac{e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\be
 {1+e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}}.   $$ 
 One can also write this as 
 $$ log \frac{p_i}{1-p_i} = {{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}.$$
-These coefficients are found using maximun likelihood estimation. In logistic regression we assume that the observations to be independent of each other, and the variables should not be to highly correlated with each other. As seen when plotting the variables with each other, one can observe some mutlicollinearity between `skin` and `bmi` as well as between `npreg` and `age`. The log-odds is the left side of the last equation. We require little or no linearity between the log-odds and the independent variables, and we also assume that we have a large sample size.    
 
+These coefficients are found using maximun likelihood estimation. In logistic regression we assume that the observations to be independent of each other, and the variables should not be to highly correlated with each other. As seen when plotting the variables with each other, one can observe some mutlicollinearity between `skin` and `bmi` as well as between `npreg` and `age`. The log-odds is the left side of the last equation. We require little or no linearity between the log-odds and the independent variables, and we also assume that we have a large sample size.    
 Fitting the model:
 
 
@@ -523,8 +527,7 @@ set.seed(1)
 diab.bagging=randomForest(diabetes ~ ., data = rftrain, mtry=7, ntree=500, importance=TRUE)
 plot(diab.bagging)
 summary(diab.bagging)
-#Her skjer det noe rart:'(((
-#ikke nå lenger:))
+
 ```
 Her må du skrive hva du får ut av denne mdoellen:
 The number of bootstrap samples, $B$, is chosen such that the error has stabilised, and is often chosen to $300$ or $500$. We se that the error is clearly stabilised at $B=500$, and choose that to be the number of bootstrap samples. 
@@ -589,9 +592,6 @@ print("Misclassification rate for the test data: ")
 misclas_test_svm 
 
 ```
-
-
-
 
 
 * one method from Module 11: Neural networks
