@@ -426,7 +426,6 @@ pheatmap(pca$x[,1:npcs],scale="none",cluster_col=FALSE,cluster_row=TRUE,clusteri
 flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
 ctrain=flying$ctrain
 ctest=flying$ctest
-summary(flying)
 ```
 
 **Q28:** Start by getting to know the _training data_, by producing summaries and plots. Write a few sentences about what you observe and include your top 3 informative plots and/or outputs.
@@ -452,42 +451,34 @@ kanskje npreg og age? ja.
 **Q29:** Use different methods to analyse the data. In particular use 
 
 * one method from Module 4: Classification   
-We choose logistic regression since we only have two responce classes.
+We choose logistic regression since we only have two responce classes. When using logistic regression, the model is based on probabilities that $Y=1$. That means the probability that a person has diabetes. In this case, this probability is calculated by 
+$$p(x_i)= p_i = \frac{e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}}
+{1+e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}}.   $$ 
+One can also write this as 
+$$ log \frac{p_i}{1-p_i} = {{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}.$$
+These coefficients are found using maximun likelihood estimation. In logistic regression we assume that the observations to be independent of each other, and the variables should not be to highly correlated with each other. As seen when plotting the variables with each other, one can observe some mutlicollinearity between `skin` and `bmi` as well as between `npreg` and `age`. The log-odds is the left side of the last equation. We require little or no linearity between the log-odds and the independent variables, and we also assume that we have a large sample size.    
+
+Fitting the model:
+
+
 ```{r}
-diab.glm = glm(diabetes ~ ., data = ctrain, family = "binomial")
+lrtrain=ctrain
+lrtest=ctest
+library(glmnet)
+diab.glm = glm(diabetes ~ ., data = lrtrain, family = "binomial")
 summary(diab.glm)
 
 ```
-When using logistic regression, the model is based on probabilities that $Y=1$. That means the pobability that a person has diabetes. 
-$$p(x_i)= p_i = \frac{e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}}
-{1+e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}}   $$ 
-One can also write this as 
-$$ log \frac{p_i}{1-p_i} = {{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}$$
 
-
-
-
-
-What are the model assumptions????? 
-finnes noen assumtions her: https://www.statisticssolutions.com/assumptions-of-logistic-regression/
-skjlnner ikke alt det som står der men.   
-en ting er i hvert fall: observations must be independent of each other. 
-bare to response classes. 
-
-
-Tuning parameters or model selection, how is that perfromed?
-the $\beta$'s are found with maximum likelihood estimation. (this is why we assume that the observations are independent of each other, I think.)
-
-Insight into the interpretation of the predicted model: torr man bør introdusere odds her. 
-
+If we look at the summary of the model, we see that there are three significate covariates woth p-value less than $0.05$. These are `glu`, `bmi` and `ped`, which in fact all have p-values less than $0.01$. The covariates `bp` and `skin` have rather high p-values, which means that they may not be that important in the model. 
 
 
 
 Evaluation of the model:
 ```{r}
-diab.glm_prob=predict(diab.glm, newdata=ctest, type="response")
+diab.glm_prob=predict(diab.glm, newdata=lrtest, type="response")
 diab.glm_pred=ifelse(diab.glm_prob > 0.5, 1, 0)
-conf_test=table(diab.glm_pred, ctest$diabetes)
+conf_test=table(diab.glm_pred, lrtest$diabetes)
 conf_test
 misclass_test = (232-sum(diag(conf_test)))/232
 misclass_test
@@ -497,24 +488,14 @@ misclass_test
 
 
 If one appiles this model to the test data one can find the proporsion of mistakes that are made, called the misclassification test error rate. The misclassification test error rate is thus
-$$Test\,\, error = \frac{29+18}{232} = 0.2025862. $$
-We can also use the fitted model to find predictions for the training data and hence, finding the miscalsification training error rate.
-```{r}
-glm_train_prob=diab.glm$fitted.values
-glm_train_pred=ifelse(glm_train_prob>0.5, 1, 0)
-conf_train=table(glm_train_pred, ctrain$diabetes)
-conf_train
-misclas_train = (300 - sum(diag(conf_train)))/300
-misclas_train
+$$Test\,\, error = \frac{29+18}{232} = 0.2025862. $$   
 
-
-```
 
 Finding ROC-curve and AUC
 ```{r}
 library(pROC)
 par(pty='s')
-glm_ROC = roc(ctest[ ,1], diab.glm_prob, plot=TRUE, legacy.axces=TRUE)
+glm_ROC = roc(lrtest[ ,1], diab.glm_prob, plot=TRUE, legacy.axces=TRUE)
 glm_ROC
 
 
@@ -530,40 +511,29 @@ The area under the ROC curve, hence the AUC, is calcualed to be 0.8451
 
 * one method from Module 8: Trees (and forests)
 
-We choose to use bagging to analyse the data. 
-```{r}
+We choose to use bagging to analyse the data. When using bagging one constucts bootstrap samples, and here we make 500 samples. A classification tree is made from each sample, $\hat{f}^{*b}$. $b=1...B$, where $B$ is the number of bootstrap samples. Then one avareage over these predictions. Each of these classification trees will have high variance and low bias, but when we average over the trees, the variance decreases. When we use bagging, we assume that the observations are independent.     
+
+When using bagging instead of one simple classification tree, the variance is decreased, but this is on the cost of interpretability. When you average over multiple trees, you loose som of the interpretability that we find in classification trees. However it is possible to make varibale importance plots. Here the predictors are sorted based on their importance, where the more important predictors for either increase in MSE of node purity are placed further up than the less important ones. 
+
+```{r bagging}
+rftrain=ctrain
+rftest=ctest
 library(randomForest)
 set.seed(1)
-diab.bagging=randomForest(diabetes ~ ., data = ctrain, mtry=8, ntree=500, importance=TRUE)
+diab.bagging=randomForest(diabetes ~ ., data = rftrain, mtry=7, ntree=500, importance=TRUE)
 plot(diab.bagging)
-#summary(diab.bagging)
+summary(diab.bagging)
+#Her skjer det noe rart:'(((
+#ikke nå lenger:))
 ```
-
-
-Write out the model: det er jo litt vanskelig når det er flere trær, men man kan lage et oversiktstre vha Gini-index. ?? =variance importance plot. ?
-
-When using bagging one constucts bootstrap samples, and here we make 500 samples. A classification tree is made from each sample, $\hat{f}^{*b}$. $b=1...B$, where $B$ is the number of bootstrap samples. 
-for classification:
-enten: ta majority vote av de predictions man får fra hvert tre for en observasjon/test
-eller: man kan ta gjennomsnittet av sannsynligheten til hver klasse. 
-jeg vet ikke hva den funksjonen vil bruker i r gjør :'(((
-
-Model assumptions: 
-independent observations
-
-
-Tuning parameters or model selection: 
-tuning: antall trær, må være stor nok til at erroren har flatet ut. ofte 300 eller 500. dette er forrresten ikke regarded as a tuning parameter.
-model selcetion???? den velger jo flere tilfeldige bootstrap samples, også lager den et classification tre basert på hvert sample. da tar den gjennomsnittet av alle predictos i sampelet, også lager den en splitt basert på det. Er det dette de vil ha her? 
-
-Insight into the interpretation of the fitted model:
-When using bagging instead of one simple classification tree, the variance is decreased, but this is on the cost of interpretability. When you average over multiple trees, you loose som of the interpretability that we find in classification trees. However it is possible to make varibale importance plots. Here the predictors are sorted based on their importance, where the more important predictors for either increase in MSE of node purity are placed further up than the less important ones. 
+Her må du skrive hva du får ut av denne mdoellen:
+The number of bootstrap samples, $B$, is chosen such that the error has stabilised, and is often chosen to $300$ or $500$. We se that the error is clearly stabilised at $B=500$, and choose that to be the number of bootstrap samples. 
 
 ```{r}
 varImpPlot(diab.bagging)
 
 ```
-We see that $glu$ is the covariate that contributes the most to both increase in MSE and to increse in the node purity. Both $npreg$ and $bp$ contributes the least. 
+In the variance imporatance plots we see that $glu$ is the covariate that contributes the most to both increase in MSE and to increse in the node purity. Both $npreg$ and $bp$ contributes the least. HÆ? nå skjønner jeg ikke helt hva jeg har skrevet her?? 
 skrive mer utfyllende?
 
 
@@ -571,34 +541,24 @@ Evaluation of the model:
 
 Misclassification rate for the test data
 ```{r}
-diab.bag_prob=predict(diab.bagging, newdata=ctest, type="response")
+diab.bag_prob=predict(diab.bagging, newdata=rftest, type="response")
 diab.bag_pred=ifelse(diab.bag_prob>0.5, 1, 0)
-conf_test_bagging=table(diab.bag_pred, ctest$diabetes)
+conf_test_bagging=table(diab.bag_pred, rftest$diabetes)
 conf_test_bagging
 misclass_test_bagging = (232-sum(diag(conf_test_bagging)))/232
 misclass_test_bagging 
 
 ```
 
-Misclassification rate for the training set
-```{r}
-#diab.bag_train_prob=diab.bagging$predicted
-bagging_train_pred=ifelse(diab.bagging$predicted > 0.5, 1, 0)
-conf_train_bagging=table(bagging_train_pred, ctrain$diabetes)
-conf_train_bagging
-misclas_train_bagging = (300- sum(diag(conf_train_bagging)))/300
-misclas_train_bagging
-
-```
 
 ROC curve and AUC
 ```{r}
 #Det er noe her som ikkke fungerer når man knitter????
 
-#library(pROC)
-#par(pty='s')
-#bagging_ROC=roc(ctest[ ,1],diab.bag_prob, plot=TRUE, legacy.axes=TRUE)
-#bagging_ROC
+library(pROC)
+par(pty='s')
+bagging_ROC=roc(rftest[ ,1],diab.bag_prob, plot=TRUE, legacy.axes=TRUE)
+bagging_ROC
 
 ```
 The $AUC$ is $0.8288$. 
@@ -608,17 +568,19 @@ The $AUC$ is $0.8288$.
 We choose the support vector machines method. 
 
 
-```{r}
+```{r svm}
+svmtrain=ctrain
+svmtest=ctest
 library(e1071)
 set.seed(2)
-CV_radial = tune(svm, diabetes ~ ., data=ctrain, kernel="radial", ranges=list(gamma=c(10^-5, 10^-4,0.001,0.01,0.1,1,2,3,4,5), cost=c(0.001, 0.01, 0.1, 1, 5, 10, 20,40,80,100,120,140,160)))
+CV_radial = tune(svm, diabetes ~ ., data=svmtrain, kernel="radial", ranges=list(gamma=c(10^-5, 10^-4,0.001,0.01,0.1,1,2,3,4,5), cost=c(0.001, 0.01, 0.1, 1, 5, 10, 20,40,80,100,120,140,160)))
 #summary(CV_radial)
 #best: gamma=0.001, cost=5
 svm_best_model=CV_radial$best.model
 summary(svm_best_model)
 
 #Finding miclassification rate for the test set:
-svm_prob_test=predict(svm_best_model, newdata=ctest, type="response")
+svm_prob_test=predict(svm_best_model, newdata=svmtest, type="response")
 svm_pred_test=ifelse(svm_prob_test>0.5, 1, 0)
 conf_test_svm=table(svm_pred_test, ctest$diabetes)
 conf_test_svm
@@ -626,24 +588,6 @@ misclas_test_svm=(232-sum(diag(conf_test_svm)))/232
 print("Misclassification rate for the test data: ")
 misclas_test_svm 
 
-#Finding the misclassification rate for the training set:
-svm_train_prob=predict(svm_best_model, newdata=ctrain, type="response")
-svm_train_pred=ifelse(svm_train_prob>0.5, 1, 0)
-conf_train_svm=table(svm_train_pred, ctrain$diabetes) #Her skjer det noe feil????
-conf_train_svm
-misclass_train_svm=(300-sum(diag(conf_train_svm)))/300
-print("Misclassification rate for the train set: ")
-misclass_train_svm
-
-
-
-
-
-bagging_train_pred=ifelse(diab.bagging$predicted > 0.5, 1, 0)
-conf_train_bagging=table(bagging_train_pred, ctrain$diabetes)
-conf_train_bagging
-misclas_train_bagging = (300- sum(diag(conf_train_bagging)))/300
-misclas_train_bagging
 ```
 
 
