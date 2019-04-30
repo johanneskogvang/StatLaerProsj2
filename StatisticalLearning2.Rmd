@@ -139,15 +139,15 @@ Cross-validation is in general more computationally expensive than model selecti
 To represent `cut`, the `fair cut` is removed and used as a reference. This means that if the cut goes from 'fair' to 'good' and no other covariates has changed, then the price is $\beta_{cutGood} =  0.028558$ higher. The same holds for `color` and `clairity`, where `colorD` and `clarityI1` are used as reference values. 
 
 Looking at the summary of the `best subset model`, one can see that the best model is 
-$$ logprice = \beta_{logcarat}x_{logcarat} + \beta_{cutGood}x_{cutGood} + \beta_{cutVeryGood}x_{cutVeryGood} +\beta_{cutPremium}x_{cutPremium} + \beta_{cutIdeal}x_{cutIdeal} \\ 
-+ \beta_{colorE}x_{colorE} + \beta_{colorF}x_{colorF} + \beta_{colorG}x_{colorG} + \beta_{colorH}x_{colorH} +  \beta_{colorI}x_{colorI} + \beta_{colorJ}x_{colorJ} \\
-+ \beta_{claritySI2}x_{claritySI2} + \beta_{claritySI1}x_{claritySI1} + \beta_{clarityVS2}x_{clarityVS2} + \beta_{clarityVS1}x_{clarityVS1}\\
-+ \beta_{clarityVVS2}x_{clarityVVS2} + \beta_{clarityVVS1}x_{clarityVVS1} + \beta_{clarityIF}x_{clarityIF} + \beta_{xx}x_{xx} $$
-The worst `cut` is used as a reference, therefor the $\beta$'s are positive, avd logprice will increase with a better cut. The same holds for `clarity`, while the best value is used for `color`, hence the $\beta$'s are negative. One can also see that the depth, table, witdth and depth are not included in this model. This could mean that the shape of the diamond isn't as important as the weight. All of the remainding covariates are significant. 
+$$ \text{logprice} =\beta_{\text{intercept}} + \beta_{\text{logcarat}} \cdot x_{\text{logcarat}} + \beta_{\text{cutGood}}\cdot x_{\text{cutGood}} + \beta_{\text{cutVeryGood}}\cdot x_{\text{cutVeryGood}} +\beta_{\text{cutPremium}}\cdot x_{\text{cutPremium}} + \beta_{\text{cutIdeal}}\cdot x_{\text{cutIdeal}} \\ 
++ \beta_{\text{colorE}}\cdot x_{\text{colorE}} + \beta_{\text{colorF}}\cdot x_{\text{colorF}} + \beta_{\text{colorG}}\cdot x_{\text{colorG}} + \beta_{\text{colorH}}\cdot x_{\text{colorH}} +  \beta_{\text{colorI}}\cdot x_{\text{colorI}} + \beta_{\text{colorJ}}\cdot x_{\text{colorJ}} \\
++ \beta_{\text{claritySI2}}\cdot x_{\text{claritySI2}} + \beta_{\text{claritySI1}}\cdot x_{\text{claritySI1}} + \beta_{\text{clarityVS2}}\cdot x_{\text{clarityVS2}} + \beta_{\text{clarityVS1}}\cdot x_{\text{clarityVS1}}\\
++ \beta_{\text{clarityVVS2}}\cdot x_{\text{clarityVVS2}} + \beta_{\text{clarityVVS1}}\cdot x_{\text{clarityVVS1}} + \beta_{\text{clarityIF}}\cdot x_{\text{clarityIF}} + \beta_{\text{xx}}\cdot x_{\text{xx}} $$
 
-**Q7:** Calculate and report the MSE of the test set using the best model (on the scale of `logprice`).  
+The worst `cut` is used as a reference, and therefore the $\beta$'s are positive and logprice will increase with a better cut. The same holds for `clarity`, while the best value is used for `color`, and thus the $\beta$'s are negative. One can also see that the depth, table and witdth are not included in this model. This could mean that the shape of the diamond isn't as important as the weight. All of the remainding covariates are significant. 
 
-```{r,eval=FALSE}
+```{r}
+
 library(bestglm)
 ds=as.data.frame(within(dtrain,{
   y=logprice    # setting reponse
@@ -156,16 +156,21 @@ ds=as.data.frame(within(dtrain,{
   carat=NULL    # not include as covariate
   }))
 fit_bsm=bestglm(Xy=ds, IC="AIC")$BestModel
-#summary(fit)
+summary(fit_bsm)
 
+```
+
+
+**Q7:** Calculate and report the MSE of the test set using the best model (on the scale of `logprice`).  
+
+```{r,eval=FALSE}
 
 pred_bsm = predict(fit_bsm, newdata=dtest)
 mse_bsm = mean((dtest$logprice-pred_bsm)^2)
 mse_bsm
 
 ```
-Using the best model, the MSE is calculatet to be $0.003600305$.
-
+Using the best model, the MSE is calculated to be $0.003600305$.
 
 **Q8:** Build a model matrix for the covariates `~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1`. What is the dimension of this matrix?  
 ```{r}
@@ -218,11 +223,11 @@ When using a greedy approach one always take the locally best choice, not thinki
 
 When constructing a regression tree one uses the top-down implementation with the greedy approach. One starts at the top where all observations belong to one single region. Then this region is split into two new branches, choosing the split with the highest reduction in the RSS. The next split in the tree is also the split that reduces the RSS the most, and so it continues untill the desired number of regions. All of these regions gets one prediction each, which is the mean of the training data that falls into that region. 
 
-
-
 **Q12:** Is a regression tree a suitable method to handle both numerical and categorical covariates? Elaborate. 
-Bare numerical siden man lager sliptsene selv? bruk heller classification tree til categorical??
+Bare numerical siden man lager splitsene selv? bruk heller classification tree til categorical??
 men martine sier at den er bra på begge. 
+
+A regression tree will be a suitable method for both numerical and categorical covariates; it is when the response is categorical one should use a classification three instead. A regression tree can be used in most cses where normal linear regression can also be used, and it has the benefits that it is easier to interpret and that it can be simplified using bagging and boosting, etc. It can also be added that when constructing a regression tree with numerical covariates, one should choose the splits according to what produces the lowest MSE. 
 
 **Q13:** Fit a (full) regression tree to the diamond data with `logprice` as the response (and the same covariates as for c and d), and plot the result. Comment briefly on you findings. 
 ```{r}
@@ -230,8 +235,6 @@ library(tree)
 tree.logprice = tree(logprice~logcarat+cut+clarity+color+depth+table+xx+yy+zz, data=dtrain)
 plot(tree.logprice)
 text(tree.logprice, pretty=1)
-
-
 
 ```
 
