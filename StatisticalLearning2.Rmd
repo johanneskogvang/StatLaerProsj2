@@ -484,8 +484,6 @@ library(pROC)
 par(pty='s')
 glm_ROC = roc(lrtest[ ,1], diab.glm_prob, plot=TRUE, legacy.axces=TRUE)
 glm_ROC
-
-
 ```
 
 The area under the ROC curve, hence the AUC, is calcualed to be 0.8451
@@ -508,7 +506,7 @@ ctrain=flying$ctrain
 ctest=flying$ctest
 
 library(randomForest)
-set.seed(1)
+set.seed(2)
 diab.bagging=randomForest(diabetes ~ ., data = ctrain, mtry=7, ntree=500, importance=TRUE)
 plot(diab.bagging)
 summary(diab.bagging)
@@ -553,11 +551,15 @@ We choose the support vector machines method.
 
 
 ```{r svm}
+flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
+ctrain=flying$ctrain
+ctest=flying$ctest
+
 svmtrain=ctrain
 svmtest=ctest
 library(e1071)
 set.seed(2)
-CV_radial = tune(svm, diabetes ~ ., data=svmtrain, kernel="radial", ranges=list(gamma=c(10^-5, 10^-4,0.001,0.01,0.1,1,2,3,4,5), cost=c(0.001, 0.01, 0.1, 1, 5, 10, 20,40,80,100,120,140,160)))
+CV_radial = tune(svm, diabetes ~ ., data=sctrain, kernel="radial", ranges=list(gamma=c(10^-5, 10^-4,0.001,0.01,0.1,1,2,3,4,5), cost=c(0.001, 0.01, 0.1, 1, 5, 10, 20,40,80,100,120,140,160)))
 #summary(CV_radial)
 #best: gamma=0.001, cost=5
 svm_best_model=CV_radial$best.model
@@ -565,11 +567,16 @@ summary(svm_best_model)
 
 #Finding miclassification rate for the test set:
 svm_prob_test=predict(svm_best_model, newdata=svmtest, type="response")
+summary(svm_prob_test)
 svm_pred_test=ifelse(svm_prob_test>0.5, 1, 0)
 conf_test_svm=table(svm_pred_test, ctest$diabetes)
 conf_test_svm
 misclas_test_svm=(232-sum(diag(conf_test_svm)))/232
 cat("Misclassification rate for the test data:", misclas_test_svm)
+
+par(pty='s')
+svm_ROC=roc(ctest[ ,1], svm_prob_test, plot=TRUE, legacy.axes=TRUE)
+svm_ROC
 ```
 
 
