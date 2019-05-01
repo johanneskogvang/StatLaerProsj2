@@ -16,7 +16,7 @@ knitr::opts_chunk$set(message=FALSE)
 knitr::opts_chunk$set(results="hold")
 ```
 
-```{r,eval=FALSE,echo=TRUE}
+```{r,eval=FALSE,echo=FALSE}
 install.packages("knitr") #probably already installed
 install.packages("rmarkdown") #probably already installed
 install.packages("bestglm")# for subset selection with categorical variables
@@ -28,7 +28,7 @@ install.packages("ggdendro")
 BiocManager::install(c("pheatmap")) #heatmap in Problem 2
 ```
 
-```{r,eval=FALSE}
+```{r,eval=FALSE, echo=FALSE}
 install.packages("ggplot2")
 install.packages("GGally") # for ggpairs
 install.packages("caret") #for confusion matrices
@@ -590,11 +590,44 @@ conf_test_svm
 misclas_test_svm=(232-sum(diag(conf_test_svm)))/232
 print("Misclassification rate for the test data: ")
 misclas_test_svm 
-
 ```
 
 
 * one method from Module 11: Neural networks
+We now use a machine learning technique based on neural networks. Because the application is classification with only two classes we use a network with only one output node. The input layer consists of one node for each covariate which gives an input layer with a total of 7 nodes. We use a method in R called `nnet` which uses one hidden layer where the number of hidden nodes can be varied to fit our problem. To see what works best in our case we will use bootstrapping to find the best choice for this tuning parameter. 
+
+```{r neural networks}
+#loading again because the data has to be unchanged
+flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
+ctrain=flying$ctrain
+ctest=flying$ctest
+
+nntest = ctest
+nntrain = ctrain
+
+library(nnet)
+library(NeuralNetTools)
+library(pROC)
+
+#Bootstrapping to find best model:
+set.seed(2)
+
+bs = tune(nnet, diabetes ~ ., data=nntrain, ranges=list(size=1:12))
+
+nn_best_model=bs$best.model
+
+nn_prob_test=predict(nn_best_model, newdata=nntest) #jeg får ikke til , type="response"
+nn_pred_test=ifelse(nn_prob_test>0.5, 1, 0)
+conf_test_nn=table(nn_pred_test, ctest$diabetes)
+conf_test_nn
+misclas_test_nn=(length(ctest[, 1])-sum(diag(conf_test_nn)))/length(ctest[, 1])
+cat("Misclassification rate for the test data: ", misclas_test_nn)
+
+roc_curve = roc(response=ctest[,1], predictor=nn_prob_test, legacy.axes=TRUE)
+
+ggroc(roc_curve) + ggtitle("ROC curve for neural network model")
+
+```
 
 For each method you 
 
