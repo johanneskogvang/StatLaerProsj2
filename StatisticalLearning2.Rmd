@@ -46,7 +46,7 @@ dtrain=all$dtrain
 dtest=all$dtest
 ```
 
-**Q1**: When getting to know the data we have to know if the response variable should be transformed to be as meaningful as possible. We produce some plots to get to know the behaviour of the response variable.
+**Q1**: Would you choose `price` or `logprice` as response variable? Justify your choice. Next, plot your choice of response pairwise with `carat`, `logcarat`, `color`, `clarity` and `cut`. Comment.
 ```{r plott}
 hist(dtrain$price)
 hist(dtrain$logprice)
@@ -96,7 +96,7 @@ plot(dtrain$clarity, dtrain$logprice, main = 'Clarity vs logprice')
 plot(dtrain$cut, dtrain$logprice, main = 'Cut vs logprice')
 ```
 
-From both the plot with `carat` and `logcarat` we observe a clear indication that higher carat leads to a higher price, which is expected. The relation between `logcarat` and `logprice` seems to be linear. 
+From both the plot with `carat` and `logcarat` we observe a clear indication that higher carat leads to a higher price, which is expected. The relation between `logcarat` and `logprice` seems to be linear, which indicates that the price grows linearly with the carat. 
 
 The relation between `logprice`and `clarity` is less apparent. Looking at the medians and the mid 50 percentiles, is seems as though the price decreses with better clarity, which is counterintuitive. We do however, observe that many outliers in the most extreme observations, and that the whiskers for most of the clarities cover mostly the entire price range. This indicates that the clarity has little influence on the diamond price. 
 
@@ -104,17 +104,18 @@ Some of the same is observable in the plot between `cut` and `logprice`, where t
 
 Use the local regression model $\texttt{logprice} = \beta_0 + \beta_1 \texttt{carat}+ \beta_2 \texttt{carat}^2$ weighted by the tricube kernel $K_{i0}$. 
 
-**Q2:** 
+**Q2:** What is the predicted price of a diamond weighting 1 carat. Use the closest 20% of the observations.  
 ```{r message=FALSE, warning=FALSE}
+#fit = loess(dtrain$logprice ~ dtrain$carat, span=.2)
 fit = loess(logprice ~ carat, data=dtrain, span=.2 )
-cat("The price of a diamond weighing 1 carat is",10^predict(fit, 1),", when we use the closest 20%")
+10^predict(fit, 1)
 
 ```
 
-**Q3:** 
-In local regression we have $\hat{f}=\beta_0+\beta_1 x_i+\beta_2x_i^2$, while for KNN-regression this $\hat{f}$ is konstant equal to the mean of the observations in the neighbourhood. Hence, for local regression to be equal to KNN-regression we have $ \beta_1 = \beta_2 = 0$. Also, we want $K_{i0}$ equal to one for the observations in the neighbourhood, and zero for the ones outside. 
+**Q3:** What choice of $\beta_1$, $\beta_2$ and $K_{i0}$ would result in KNN-regression?  
+In local regression we have $\hat{f}=\beta_0+\beta_1 x_i+\beta_2x_i^2$, while for KNN-regression this $\hat{f}$ is konstant equal to the mean of the observations in the neighbourhood. Hence, for this to be the KNN-regression we have $ \beta_1 = \beta_2 = 0$. Also, we want $K_{i0}$ equal to one for the observations in the neighbourhood, and zero for the ones outside. 
 
-**Q4:**   
+**Q4:** Describe how you can perform model selection in regression with AIC as criterion.  
 When we perform model selection in regression with AIC as the criterion, we perform a best subset selcetion, and choose the set of covariates that produce the lowest AIC value. 
 The full procedure when one has a model depending on $k$ covariates is as follows:
 1) For every value $i$ from 1 to $k$, all $k \choose j$ models that contain $j$ covariates are fitted. 
@@ -124,8 +125,9 @@ The full procedure when one has a model depending on $k$ covariates is as follow
 $$\text{AIC} = \frac{\text{SSE}/n}{\hat{\sigma^2}} + 2\frac{p}{n}$$
 where $n$ is the number of observations and $p$ is the number of selected covariates in the given model. 
 
-**Q5:** 
-We now look at the main differences between using AIC and using Cross-validation for model selection. Cross-validation is in general more computationally expensive than model selection with AIC, however, this is rearly considered a problem with today's computers. Cross-validation also measures the test error directly, instead of adjusting the training error for model size, as the AIC does. Finally, cross-validation makes fewer assumptions about the underlying model. Cross-validation does not, unlike AIC, directly punish models with many covariates. If two models with different complexity produces the same test error, cross-validation will do nothing to choose the less complex model. 
+**Q5:** What are the main differences between using AIC for model selection and using cross-validation (with mean squared test error MSE)?
+
+Cross-validation is in general more computationally expensive than model selection with AIC, however, this is rearly considered a problem with today's computers. Cross-validation also measures the test error directly, instead of adjusting the training error for model size, as the AIC does. Finally, cross-validation makes fewer assumptions about the underlying model. Cross-validation does not directly punish models with many covariates; if two models with different complexity produces the same test error, cross-validation will do nothing to choose the less complex model. 
 
 **Q6:** See the code below for performing model selection with `bestglm()` based on AIC. What kind of contrast is used to represent `cut`, `color` and `clarity`? Write down the final best model and explain what you can interpret from the model.    
 
@@ -212,13 +214,18 @@ The MSE of the lasso regression is $0.00363693$, in the `logprice` scale.
 
 
 
-**Q11:** When using a greedy approach one always takes the locally best choice, not thinking about what happens next or in the big picture. When using a greedy approach constructing a regression tree, one will always make the best splits, meaning one will choose the split that reduces the RSS the most. 
+**Q11:** A regression tree to model is built using a _greedy_ approach. What does that mean? Explain the strategy used for constructing a regression tree. 
+When using a greedy approach one always takes the locally best choice, not thinking about what happens next or in the big picture. When using a greedy approach constructing a regression tree, one will always make the best splits, meaning one will choose the split that reduces the RSS the most. 
 
 When constructing a regression tree one uses the top-down implementation with the greedy approach. One starts at the top where all observations belong to one single region. Then this region is split into two new branches, choosing the split with the highest reduction in the RSS. The next split in the tree is also the split that reduces the RSS the most, and so it continues until the desired number of regions is reached. All of these regions get one prediction each, which is the mean of the training data that falls into that region. 
 
-**Q12:** A regression tree will be a suitable method for both numerical and categorical covariates; it is when the response is categorical one should use a classification three instead. A regression tree can be used in most cses where normal linear regression can also be used, and it has the benefits that it is easier to interpret and that it can be simplified using bagging and boosting, etc. It can also be added that when constructing a regression tree with numerical covariates, one should choose the splits according to what produces the lowest MSE. 
+**Q12:** Is a regression tree a suitable method to handle both numerical and categorical covariates? Elaborate. 
 
-**Q13:** Below, we have fitted a regression tree to the diamond data with `logprice` as the response. From the drawing below, we see that it only sorts on the lenght and width of the diamond, which should indicate that these are the most important covariates when classifying the price of the diamond. However, the best subset selection method for instance indicates that many more of the parameters is more or equally significant to the lenght and that the width is in fact statistically insignificant. This means that we can expect some errors when prediciting with this model. 
+A regression tree will be a suitable method for both numerical and categorical covariates; it is when the response is categorical one should use a classification three instead. A regression tree can be used in most cses where normal linear regression can also be used, and it has the benefits that it is easier to interpret and that it can be simplified using bagging and boosting, etc. It can also be added that when constructing a regression tree with numerical covariates, one should choose the splits according to what produces the lowest MSE. 
+
+**Q13:** Fit a (full) regression tree to the diamond data with `logprice` as the response (and the same covariates as for c and d), and plot the result. Comment briefly on you findings. 
+
+From the drawing of the regression tree below, we see that it only sorts on the lenght and width of the diamond, which should indicate that these are the most important covariates when classifying the price of the diamond. However, the best subset selection method for instance indicates that many more of the parameters is more or equally significant to the lenght and that the width is in fact statistically insignificant. This means that we can expect some errors when prediciting with this model. 
 
 ```{r}
 library(tree)
@@ -232,12 +239,12 @@ text(tree.logprice, pretty=1)
 ```{r}
 tree_pred = predict(tree.logprice, newdata=dtest)
 mse_tree=mean((tree_pred - dtest$logprice)^2)
-cat("The MSE of the regression tree is", mse_tree)
-```
+mse_tree
 
+```
+The MSE of the regression tree is $0.01715548$.
 
 **Q15:** Explain the motivation behind bagging, and how bagging differs from random forest? What is the role of bootstrapping? 
-KAN NOEN ANDRE ENN JOHANNE SE OVER DENNE?? spesielt om jeg har svart på alle spørsmålene. 
 
 When we average over different observations, the variance is typically lower than for one single observation. One can use the bootstrap to find B repeated samples from the training data set, train each of the B sets, and then average on the trained models. This is called bootstrap aggregation, or bagging, and will reduce the variance of the model. 
 
@@ -246,13 +253,21 @@ Bagging can typically be used in regression trees, since using one single tree w
 (her kan man evt forklare hvorfor, mtp sterke prediktorer osv, men det er egentlig ikke en del av spørsmålet.)
 (har jeg svart nok på hva som er rollen til bootstrapping? Ja, synes det. )
 
-**Q16:** In random forest one will have to choose the number of trees, B. A large B will not lead to overfitting, and therefore B is chosen sufficiently large, so that the error rate has settled. 
+**Q16:** What are the parameter(s) to be set in random forest, and what are the rules for setting these?  
 
-The other parameter that needs to be set is the number of predictors used in each split, $m$. One typically chooses $m \approx \sqrt{p}$, where $p$ is the number of predictors. Then the algorithm is no longer allowed to choose splits based on the majority of the predictors. Then if one predictor is particulary strong, it will not be at the top of the trees as often as it would if bagging was used. Hence, the other predictors stand a chance, and the trees are decorrelated. 
+In random forest one will have to choose the number of trees, B. A large B will not lead to overfitting, and therefore B is chosen sufficiently large, so that the error rate has settled. 
 
-**Q17:** The main difference between random forest and boosting is that in random forest each tree is constructed based on the bootstrapped sample from the training data, while in boosting the trees are build using the residuals, meaning that each tree is build using information from the previously built trees. This makes boosting an approach that learns slowly, which in general are approaches that perform well. 
+The other parameter that needs to be set is the number of predictors used in each split, m. One typically chooses $m \approx \sqrt{p}$, where $p$ is the number of predictors. Then the algorithm is no longer allowed to choose splits based on the majority of the predictors. Then if one predictor is particulary strong, it will not be at the top of the trees as often as it would if bagging was used. Hence, the other predictors stand a chance, and the trees are decorrelated. 
 
-**Q18:** When using random forest, one usually choose $m \approx \sqrt{p}$, which in this case means that $ m \approx \sqrt{9} = 3$. Also, the number of trees in the forest, B, needs to be chosen. A big $B$ will not lead to overfitting, so we need to choose it such that the error has stabilised. Common choices are $B=300$ and $B=500$, and here $B=300$ should be sufficient. 
+**Q17:** Boosting is a popular method. What is the main difference between random forest and boosting? 
+
+The main difference between random forest and boosting is that in random forest each tree is constructed based on the bootstrapped sample from the training data, while in boosting the trees are build using the residuals, meaning that each tree is build using information from the previously built trees. This makes boosting an approach that learns slowly, which in general are approaches that perform well. 
+
+**Q18:** Fit a random forest to the diamond data with `logprice` as the response (and the same covariates as before). Comment on your choice of parameter (as decribed in Q16).   
+
+When using random forest, one usually choose $m \approx \sqrt{p}$, which in this case means that $ m \approx \sqrt{9} = 3$. Also, the number of trees in the forest, B, needs to be chosen. A big $B$ will not lead to overfitting, so we need to choose it such that the error has stabilised. Common choises are $B=300$ and $B=500$, and here it looks like $B=300$ is sufficient. 
+
+The most common choices are $B=300$ and $B=500$. 
 
 ```{r random forest 1}
 set.seed(300)
@@ -263,13 +278,14 @@ plot(rf.logprice)
 
 **Q19:** Make a variable importance plot and comment on the plot. Calculate and report the MSE of the test set (on the scale of `logprice`).  
 ```{r}
-varImpPlot(rf.logprice)
+varImpPlot(rf.logprice, type = 2)
 rf.pred=predict(rf.logprice, newdata=dtest)
 mse_rf=mean((rf.pred-dtest$logprice)^2)
-cat("The MSE of the random forest",mse_rf)
+mse_rf
 
 ```
-We see that `yy` is the most important covariate when looking at node putiry, while `cut` seems to be the least important. However, when we look at the MSE it seems like `clarity` is the most important covariate and that `zz` is less important. 
+
+We see that $yy$ is the most important covariate when looking at node putiry, while $cut$ seems to be the least important. The MSE of the random forest is $0.002828014$.
 
 **Q20:** Finally, compare the results from c (subset selection), d (lasso), e (tree) and f (random forest): Which method has given the best performance on the test set and which method has given you the best insight into the relationship between the price and the covariates?
 ```{r}
@@ -294,19 +310,19 @@ for (i in c(1,2,3,4)){
 
 ```
 
-We see that the regression tree has a substantially higher MSE than the rest, and that the random forest has the best MSE. This also indicated that the regression tree will provide us with the least information about the relation between the covariates and the price. This coincides with what we have previously observed, where the regression tree only takes two covariates into account in the prediction. 
+We see that the regression tree has a substantially higher MSE than the rest, and that the random forest has the best MSE. This also indicated that the regression tree will provide us with the least information about the realtion between the covariates and the price. This coincides with what we have previously observed, where the regression tree only takes two covariates into account in the prediction. 
 
 Even though the remaining models have approximately equal MSE, some of them gives easier insight into the relationship between the covariates and the price. The random forest method for instance, operates as a black box, and thus give little information about the effect of the different covariates on the response value. 
 
 In both the subset selection method and the lasso method, the value of the regression parameters and which covariates are included in the resulting model indicates how the different covariates influence the response. The subset selection model gives a clear result of which covariates are considered significant, which provides an easily interpretable model. For instance, one can quickly conclude on which covariates does not have a high influence on the price by looking at the result from the subset selection. 
 
-The lasso regression, in addition to removing the completely insignificant covariates, also shrinks the value of the coefficiants of the less significant covariates. This means that one can get an impression of what covariate has the most influence on the response variable as well. In our case, we see that the `logcarat` coefficient is substantially higher than the rest. This coincides well with our initial interpretation that the carat is the one covariate that influences the price the most. However, one should notice that this method of interpreting the model is not always correct, as regression coefficient also takes the value size of the covariates into account, meaning that covariates that contribute with lower values might have coefficients of higher values without being more significant.
-
+The lasso regression, in addition to removing the completely insignificant covariates, also shrinks the value of the coefficiants of the less significant covariates. This means that one can get an impression of what covariate has the most influence on the response variable as well. In our case, we see that the logcarat coeffeicient is substantially higher than the rest. This coincides well with our initial interpretation that the carat is the one covariate that influences the price the most. However, one should notice that this method of interpreting the model is not always correct, as regression coefficient also takes the value size of the covariates into account, meaning that covariates that contribute with lower values might have coefficients of higher values without being more significant.
 
 # Problem 2: Unsupervised learning [3 points]
 
 **Q21:** The principal component score is a measurement of how important a given set of observations is for a principal component. The principal components are the eigenvectors of the covariance matrix ${\hat {\bf R}}$, and thus a principal component score for a set of observations is the scaled observations multiplied with a principal component.
-$$\text{score}_i = \sum_{j=1}^{p}x_{ij}\cdot(PCi_j)$$
+$$\text{score}_i = \sum_{j=1}^{p}x_{ij}\cdot(PC_{ij})$$
+
 ```{r}
 library(ElemStatLearn)
 X=t(nci) #n times p matrix
@@ -332,18 +348,20 @@ plot(1:dim(X)[2],pca$rotation[,1],type="l",xlab="genes",ylab="weight",main="Firs
 ```
 
 
-**Q22:** The plot "First eigenvector" shows the weights of the first eigenvector of $\hat{\bf{R}}$ which is also the first principal component. The reason why there is only $64$ principal component is that there can not be more principal components than the rank of $\bf{X}$. This is because all the principal components are linearly independent, and thus the number of principal components (which is the eigenvectors of $\hat{\bf{R}}$) is bounded by the rank of $X$ which is maximally $n - 1=64$ (reduces to $n-1$ because of the centering). The rank is actually $min(n-1, p)$, but because p is very large in our case it is obviously $n-1$. As seen from **Q21**, the score is directly related to a given principal component, so the number of component scores is always the same as the number of principle components.
+**Q22:** The plot "First eigenvector" shows the weights of the first eigenvector of $\hat{\bf{R}}$ which is also the first principal component. The reason why there is only $64$ principal components is that there can not be more principal components than the rank of $\bf{X}$. This is because all the principal components are linearly independent, and thus the number of principal components (which is the eigenvectors of $\hat{\bf{R}}$) is bounded by the rank of $X$ which is maximally $n - 1=64$ (reduces to $n-1$ because of the centering). The rank is actually $min(n-1, p)$, but because p is very large in our case it is obviously $n-1$. As seen from **Q21**, the score is directly related to a given principal component, so the number of component scores is always the same as the number of principle components.
 
 **Q23:** The proportion of variance explained by a single principle component is calculated as 
 $$\text{PVE}=\frac{\text{variance explained by }m\text{th component}}{\text{total variance}} = \frac{\frac{1}{n}\sum_{i=1}^{n}(\sum_{j = 1}^{p} \phi_{jm}z_{ij})^2}{\frac{1}{n}\sum_{j=1}^{p}\sum_{i=1}^{n}z_{ij}}.$$
-From this formula it is also easy to see that the total variance `sum(pca$sdev^2=p)`. The total variance defined above is the same as the sum of the variances of the columns of $\bf{Z}$ which is $p$ because they are standardized and thus every column has variance $1^2=1$. An easier way of computing the proportion of variance is to use the eigenvalues corresponding to the principle components. It can be shown that $\text{Var}(\phi_j) = \lambda_j$ and thus $$\text{PVE}=\frac{\lambda_m}{\sum_{j=1}^{p}\lambda_j}$$
+From this formula it is also easy to see that the total variance `sum(pca$sdev^2)=p`. The total variance defined above is the same as the sum of the variances of the columns of $\bf{Z}$ which is $p$ because they are standardized and thus every column has variance $1^2=1$. An easier way of computing the proportion of variance is to use the eigenvalues corresponding to the principle components. It can be shown that $\text{Var}(\phi_j) = \lambda_j$ and thus $$\text{PVE}=\frac{\lambda_m}{\sum_{j=1}^{p}\lambda_j}$$
 
 ```{r proportion of variance plot}
 pve=100*pca$sdev^2/sum(pca$sdev^2)
 plot(cumsum(pve), type = "o", ylab = "Cumulative PVE", xlab = "Principal component", col="brown3")
 
 ```
-We can see from the plot that it takes about 30 principal components to explain 80% of the variance, we check for the different number of principal components to check this and find the exact answer.
+
+We can see from the plot that it takes about 30 principal components to explain 80% of the variance, and we check for the different number of principal components to check this and find the exact answer.
+
 ```{r proportion of variance}
 
 totvar = sum(pca$sdev^2)
@@ -354,12 +372,10 @@ pve31 = sum(pca$sdev[1:31]^2)/totvar
 cat("The first 31 principal components explains", pve31 * 100, "% of the variance and 32 principal components explains", pve32 * 100, "% of the variance. Thus we need 32 principal components to explain 80% of the variance in the data.")
 ```
 
-**Q24**: From the plot above, plotting PC1 agianst PC2, the most obvious clustering is the blue clustering, where the genes are from `MELANOMA` cancer tumors. The green `LEUKEMIA` genes are also easy to seperate from the others, and so are genes from `COLON` cancer tumors. We observe that the genes from other cancer types are mostly located in the left upmost corner and are also, to some degree, clustered. The exeption is the genes from the breast cancer tumor, which are not clustered together at all and is spread around the whole plot. 
-  It is known that the `K562` samples are leukemia cells and we can see from the plot that they are clustered together with the other leukemia samples. The breast cancer samples `MCF7` is harder to say something about because the other breast cancer samples are also spread widely around. The unknown sample is laying in the upper left corner, so it could belong to any of those group really. The most likely cancer type is although `NSCLC` or `OVARIAN` because the closest points are of those types.
+**Q24**: From the plot above, plotting PC1 agianst PC2, the most obvious clustering is the blue clustering, where the genes are from `MELANOMA` cancer tumors. The green `LEUKEMIA` genes are also easy to seperate from the others, and so are genes from `COLON` cancer tumors. We observe that the genes from other cancer types are mostly located in the left upmost corner and are also, to some degree, clustered. The exeption is the genes from the breast cancer tumor, which are not clustered together at all and are spread around the entire plot. 
+  It is known that the `K562` samples are leukemia cells and we can see from the plot that they are clustered together with the other leukemia samples. It is harder to say something about the breast cancer samples, `MCF7`, because the other breast cancer samples are also spread widely around. The unknown sample lays in the upper left corner, so it could belong to any of those groups. however, the most likely cancer types are `NSCLC` or `OVARIAN` because the closest points are of those types.
 
-We plot a couple of other projections of the data onto the principal components to see if we find other interesting relationships. It is mostly interesting to look at the fist principal comonents, because it is in those that contains the most variance. It could have been interesting to find plots where the breast cancer cells are clustered together or find a relation for the unknown sample, but this turned out to be very hard to do. Below two other pairs of principal components are plotted together. In the first plot we see PC1 agianst PC3 and here we also see that green and yellow are clustered, and again the remaining cancer types are slightly clustered and also here it is hard to find a relation between the cases of breast cancer. Although we see here that the `MFC7` samples of breast cancer is a bit more separated from the cluster of `COLON` cases and is still closely associated with a breast cancer case. This is shown even more clearly by plotting PC3 against PC4 as shown below. The `UNKNOWN` sample was hard to classify no matter what combination we tried, and because of this we conclude that it is most probable that it belongs to one of the cancer types that is hard to separate from the others. Our strongest hypothesis is that it belongs to the `NSCLC` type.
-
-
+We plot a couple of other projections of the data onto the principal components to see if we can find other interesting relationships. It is mostly interesting to look at the first principal comonents, because those contain the most variance. It could have been interesting to find plots where the breast cancer cells are clustered together or find a relation for the unknown sample, but this turned out to be difficult. Below two other pairs of principal components are plotted together. In the first plot we see PC1 agianst PC3 and here we also see that green and yellow are clustered. Again, the remaining cancer types are slightly clustered and it is hard to find a relation between the cases of breast cancer. However we see that the `MFC7` samples of breast cancer are slightly more separated from the cluster of `COLON` cases and is still closely associated with a breast cancer case. This is shown even more clearly by plotting PC3 against PC4, as shown below. The `UNKNOWN` sample was hard to classify for all combinations we tried, and because of this we conclude that it probably belongs to one of the cancer types that is hard to separate from the others. Our strongest hypothesis is that it belongs to the `NSCLC` type.
 
 ```{r}
 plot(pca$x[,1],pca$x[,2],xlab="PC1",ylab="PC2",pch=pchsamples,col=colsamples)
@@ -611,23 +627,10 @@ cat("Misclassification rate for the test data: ", misclas_test_nn)
 
 roc_curve = roc(response=ctest[,1], predictor=nn_prob_test, legacy.axes=TRUE)
 
-rel_imp <- garson(nn_best_model, bar_plot = FALSE)$rel_imp
-cols <- colorRampPalette(c( 'lightgreen', 'darkgreen'))(7)[rank(rel_imp)]
-plotnet(nn_best_model, circle_col = list(cols, 'lightblue'))
-
-ctrain[1,]
-
+ggroc(roc_curve) + ggtitle("ROC curve for neural network model")
 
 ```
-We see from the results that the size of the hidden layer is set to only one node (the visualization is shown above) and the misclassification rate is 19,8% for the fitted model. This means that a quite small model was enough to predict as well as earlier models. To interpret the model we look at the relative importance of the imput nodes and see, as we did before, that the covariates `glu`, `bmi`, `ped` and `age` are the most important covariates (the darkest green imply most important). Another notable fact is that all covariates are used, so everyone is considered significant enough to be included. If not a neural net would have set the weight to zero.  
 
-```{r ROC neural nets}
-par(pty='s')
-roc_curve = roc(response=ctest[,1], predictor=nn_prob_test, legacy.axes=TRUE, plot=TRUE)
-cat("AUC: Area under curve:", roc_curve$auc)
-
-```
-The neural net that where trained to solve the problem worked over all very well. The misclassification rate where as good as in the earlier methods and it chose a small model with only one hidden node that also made it easier to understand the model. We also see from the ROC-curve and AUC that it looks good and preforms better than random guessing.
 
 For each method you 
 
