@@ -46,7 +46,7 @@ dtrain=all$dtrain
 dtest=all$dtest
 ```
 
-**Q1**: Would you choose `price` or `logprice` as response variable? Justify your choice. Next, plot your choice of response pairwise with `carat`, `logcarat`, `color`, `clarity` and `cut`. Comment.
+**Q1**: When getting to know the data we have to know if the response variable should be transformed to be as meaningful as possible. We produce some plots to get to know the behaviour of the response variable.
 ```{r plott}
 hist(dtrain$price)
 hist(dtrain$logprice)
@@ -85,7 +85,6 @@ boxcox(fit_logprice, plotit=TRUE)
 
 
 ```
-    
 We see that in the BoxCox plots, the lambda value at maximum log-likelihood is closer to one for the logprice than for price. When lambda is close to one it means that one should use the model that is plotted. Also, we want the residuals to be independent of each other, meaning they are randomly spread and that we do not see a pattern in the residual plot. We also we want their variance to be constant. Therefore we choose to use the logprice as responce variable. 
 
 We now plot `logprice` with `carat`, `logcarat`, `color`, `clarity` and `cut`.
@@ -105,18 +104,17 @@ Some of the same is observable in the plot between `cut` and `logprice`, where t
 
 Use the local regression model $\texttt{logprice} = \beta_0 + \beta_1 \texttt{carat}+ \beta_2 \texttt{carat}^2$ weighted by the tricube kernel $K_{i0}$. 
 
-**Q2:** What is the predicted price of a diamond weighting 1 carat. Use the closest 20% of the observations.  
+**Q2:** 
 ```{r message=FALSE, warning=FALSE}
-#fit = loess(dtrain$logprice ~ dtrain$carat, span=.2)
 fit = loess(logprice ~ carat, data=dtrain, span=.2 )
-10^predict(fit, 1)
+cat("The price of a diamond weighing 1 carat is",10^predict(fit, 1),", when we use the closest 20%")
 
 ```
 
-**Q3:** What choice of $\beta_1$, $\beta_2$ and $K_{i0}$ would result in KNN-regression?  
-In local regression we have $\hat{f}=\beta_0+\beta_1 x_i+\beta_2x_i^2$, while for KNN-regression this $\hat{f}$ is konstant equal to the mean of the observations in the neighbourhood. Hence, for this to be the KNN-regression we have $ \beta_1 = \beta_2 = 0$. Also, we want $K_{i0}$ equal to one for the observations in the neighbourhood, and zero for the ones outside. 
+**Q3:** 
+In local regression we have $\hat{f}=\beta_0+\beta_1 x_i+\beta_2x_i^2$, while for KNN-regression this $\hat{f}$ is konstant equal to the mean of the observations in the neighbourhood. Hence, for local regression to be equal to KNN-regression we have $ \beta_1 = \beta_2 = 0$. Also, we want $K_{i0}$ equal to one for the observations in the neighbourhood, and zero for the ones outside. 
 
-**Q4:** Describe how you can perform model selection in regression with AIC as criterion.  
+**Q4:**   
 When we perform model selection in regression with AIC as the criterion, we perform a best subset selcetion, and choose the set of covariates that produce the lowest AIC value. 
 The full procedure when one has a model depending on $k$ covariates is as follows:
 1) For every value $i$ from 1 to $k$, all $k \choose j$ models that contain $j$ covariates are fitted. 
@@ -126,9 +124,8 @@ The full procedure when one has a model depending on $k$ covariates is as follow
 $$\text{AIC} = \frac{\text{SSE}/n}{\hat{\sigma^2}} + 2\frac{p}{n}$$
 where $n$ is the number of observations and $p$ is the number of selected covariates in the given model. 
 
-**Q5:** What are the main differences between using AIC for model selection and using cross-validation (with mean squared test error MSE)?
-
-Cross-validation is in general more computationally expensive than model selection with AIC, however, this is rearly considered a problem with today's computers. Cross-validation also measures the test error directly, instead of adjusting the training error for model size, as the AIC does. Finally, cross-validation makes fewer assumptions about the underlying model. Cross-validation does not directly punish models with many covariates; if two models with different complexity produces the same test error, cross-validation will do nothing to choose the less complex model. 
+**Q5:** 
+We now look at the main differences between using AIC and using Cross-validation for model selection. Cross-validation is in general more computationally expensive than model selection with AIC, however, this is rearly considered a problem with today's computers. Cross-validation also measures the test error directly, instead of adjusting the training error for model size, as the AIC does. Finally, cross-validation makes fewer assumptions about the underlying model. Cross-validation does not, unlike AIC, directly punish models with many covariates. If two models with different complexity produces the same test error, cross-validation will do nothing to choose the less complex model. 
 
 **Q6:** See the code below for performing model selection with `bestglm()` based on AIC. What kind of contrast is used to represent `cut`, `color` and `clarity`? Write down the final best model and explain what you can interpret from the model.    
 
