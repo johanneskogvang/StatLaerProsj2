@@ -166,7 +166,7 @@ summary(fit_bsm)
 ```{r,eval=FALSE}
 
 pred_bsm = predict(fit_bsm, newdata=dtest)
-mse_bsm = mean((dtest$logprice-pred_bsm)^2)
+mse_bsm = mean((dtest$logprice - pred_bsm)^2)
 mse_bsm
 
 ```
@@ -195,6 +195,7 @@ best_lambda_lasso
 
 #lager en modell med denne lambdaen
 fit_lasso = glmnet(x_train,y_train,alpha=1, lambda=best_lambda_lasso) 
+coef(fit_lasso)
 
 ```
 
@@ -219,17 +220,18 @@ The MSE of the lasso regression is $0.00363693$, in the `logprice` scale.
 
 
 **Q11:** A regression tree to model is built using a _greedy_ approach. What does that mean? Explain the strategy used for constructing a regression tree. 
-When using a greedy approach one always take the locally best choice, not thinking about what happens next or in the big picture. When using a greedy approach constructing a regression tree, one will always make the best splis, meaning one will choose the split that reduces the RSS the most. 
+When using a greedy approach one always takes the locally best choice, not thinking about what happens next or in the big picture. When using a greedy approach constructing a regression tree, one will always make the best splits, meaning one will choose the split that reduces the RSS the most. 
 
-When constructing a regression tree one uses the top-down implementation with the greedy approach. One starts at the top where all observations belong to one single region. Then this region is split into two new branches, choosing the split with the highest reduction in the RSS. The next split in the tree is also the split that reduces the RSS the most, and so it continues untill the desired number of regions. All of these regions gets one prediction each, which is the mean of the training data that falls into that region. 
+When constructing a regression tree one uses the top-down implementation with the greedy approach. One starts at the top where all observations belong to one single region. Then this region is split into two new branches, choosing the split with the highest reduction in the RSS. The next split in the tree is also the split that reduces the RSS the most, and so it continues until the desired number of regions is reached. All of these regions get one prediction each, which is the mean of the training data that falls into that region. 
 
 **Q12:** Is a regression tree a suitable method to handle both numerical and categorical covariates? Elaborate. 
-Bare numerical siden man lager splitsene selv? bruk heller classification tree til categorical??
-men martine sier at den er bra på begge. 
 
 A regression tree will be a suitable method for both numerical and categorical covariates; it is when the response is categorical one should use a classification three instead. A regression tree can be used in most cses where normal linear regression can also be used, and it has the benefits that it is easier to interpret and that it can be simplified using bagging and boosting, etc. It can also be added that when constructing a regression tree with numerical covariates, one should choose the splits according to what produces the lowest MSE. 
 
 **Q13:** Fit a (full) regression tree to the diamond data with `logprice` as the response (and the same covariates as for c and d), and plot the result. Comment briefly on you findings. 
+
+From the drawing of the regression tree below, we see that it only sorts on the lenght and width of the diamond, which should indicate that these are the most important covariates when classifying the price of the diamond. However, the best subset selection method for instance indicates that many more of the parameters is more or equally significant to the lenght and that the width is in fact statistically insignificant. This means that we can expect some errors when prediciting with this model. 
+
 ```{r}
 library(tree)
 tree.logprice = tree(logprice~logcarat+cut+clarity+color+depth+table+xx+yy+zz, data=dtrain)
@@ -247,39 +249,36 @@ mse_tree
 ```
 The MSE of the regression tree is $0.01715548$.
 
-
 **Q15:** Explain the motivation behind bagging, and how bagging differs from random forest? What is the role of bootstrapping? 
 
-When we average over different observations, the variance is typically lower than for one single observation. One can use the bootstrap to find B repeated samples from the training data set, train each of the B sets, and then average on the trained models. This si called bootstrap aggregation og bagging, and will reduce the variance of the model. 
+When we average over different observations, the variance is typically lower than for one single observation. One can use the bootstrap to find B repeated samples from the training data set, train each of the B sets, and then average on the trained models. This is called bootstrap aggregation, or bagging, and will reduce the variance of the model. 
 
-This can typically be used in regression trees, since using one single tree will result in high variance. Then we get B bootstrapped trees that we average over. Random forest is similar to bagging, but instead of using each of the predictors when choosing a split, a smaller sample of the predictors are used. This is called decorrelation of the trees, and will lead to an even lower variance. (her kan man evt forklare hvorfor, mtp sterke prediktorer osv, men det er egentlig ikke en del av spørsmålet.)
-(har jeg svart nok på hva som er rollen til bootstrapping?)
+Bagging can typically be used in regression trees, since using one single tree will result in high variance. Then we get B bootstrapped trees that we average over. Random forest is similar to bagging, but instead of using each of the predictors when choosing a split, a smaller sample of the predictors is used. This is called decorrelation of the trees, and will lead to an even lower variance.
 
-
+(her kan man evt forklare hvorfor, mtp sterke prediktorer osv, men det er egentlig ikke en del av spørsmålet.)
+(har jeg svart nok på hva som er rollen til bootstrapping? Ja, synes det. )
 
 **Q16:** What are the parameter(s) to be set in random forest, and what are the rules for setting these?  
-In random forest one will have to choose the number of trees, B. A large B will not lead to overfitting, and therefore B is chosen sufficiently large to have the error rate settled. 
 
-The other parameter that needs to be set is the number of predictors used in each split, m. One typically choose $m \approx \sqrt{p}$, where $p$ is the number of predictors. Then the algorithm is no longer allowed to choose slpits based on the majority of the predictors. Then if one predictor is particulary strong, it will npt be at the top of the trees as often as it would if bagging was used. Hence, the other predictors stand a chance, and the trees are decorrelated. 
+In random forest one will have to choose the number of trees, B. A large B will not lead to overfitting, and therefore B is chosen sufficiently large, so that the error rate has settled. 
 
+The other parameter that needs to be set is the number of predictors used in each split, m. One typically chooses $m \approx \sqrt{p}$, where $p$ is the number of predictors. Then the algorithm is no longer allowed to choose splits based on the majority of the predictors. Then if one predictor is particulary strong, it will not be at the top of the trees as often as it would if bagging was used. Hence, the other predictors stand a chance, and the trees are decorrelated. 
 
-**Q17:** Boosting is a popular method. What is the main difference between random forest and boosting?  
+**Q17:** Boosting is a popular method. What is the main difference between random forest and boosting? 
+
 The main difference between random forest and boosting is that in random forest each tree is constructed based on the bootstrapped sample from the training data, while in boosting the trees are build using the residuals, meaning that each tree is build using information from the previously built trees. This makes boosting an approach that learns slowly, which in general are approaches that perform well. 
-
-
 
 **Q18:** Fit a random forest to the diamond data with `logprice` as the response (and the same covariates as before). Comment on your choice of parameter (as decribed in Q16).   
 
-```{r}
+When using random forest, one usually choose $m \approx \sqrt{p}$, which in this case means that $ m \approx \sqrt{9} = 3$. Also, the number of trees in the forest, B, needs to be chosen. A big $B$ will not lead to overfitting, so we need to choose it such that the error has stabilised. Common choises are $B=300$ and $B=500$, and here it looks like $B=300$ is sufficient. 
+
+The most common choices are $B=300$ and $B=500$. 
+
+```{r random forest 1}
 set.seed(300)
 library(randomForest)
-rf.logprice=randomForest(logprice~logcarat+cut+clarity+color+depth+table+xx+yy+zz, data=dtrain, mtry=3, ntree=300, importance=TRUE) #dette
-#default mtry=m er p/3 for regression, velger default. 
+rf.logprice=randomForest(logprice~logcarat+cut+clarity+color+depth+table+xx+yy+zz, data=dtrain, mtry=3, ntree=300, importance=TRUE)
 plot(rf.logprice)
-
-#hva skal vi velge B til å være? Skal væreså høy at erroren er stabilisert, dvs høyere enn 200 en plass tror jeg. 
-# i følge module pages er B som regel 300 eller 500. 300 ser vel bst ut her. 
-
 ```
 
 **Q19:** Make a variable importance plot and comment on the plot. Calculate and report the MSE of the test set (on the scale of `logprice`).  
@@ -291,32 +290,38 @@ mse_rf
 
 ```
 
-We see that $yy$ is the most important covariates when looking at node putiry, while $cut$ seems to be the least important. The MSE of the random forest is $0.002828014$.
-
+We see that $yy$ is the most important covariate when looking at node putiry, while $cut$ seems to be the least important. The MSE of the random forest is $0.002828014$.
 
 **Q20:** Finally, compare the results from c (subset selection), d (lasso), e (tree) and f (random forest): Which method has given the best performance on the test set and which method has given you the best insight into the relationship between the price and the covariates?
 ```{r}
-#Dette oppleggge gjør at jeg ikke får knittet. Må fikses 
+library(utils)
+library(pracma)
 
-#library(utils)
-#library(pracma)
-#mses=c(mse_bsm, mse_lasso, mse_tree, mse_rf)
-#names=c("Subset selection", "Lasso", "Tree", "Random forest")
-#mse_range = linspace(0,0.2,101)
-#plot(mses, axes=FALSE)
-#axis(1, at=1:4, lab=names)
-#axis(2,mse_range)
+pred_bsm = predict(fit_bsm, newdata=dtest)
+mse_bsm = mean((dtest$logprice - pred_bsm)^2)
 
-#print("the MSE's: ")
-#for (i in c(1,2,3,4)){
-#  print(paste(names[i], ": ", round(mses[i], 4)))
-#}'
+mses=c(mse_bsm, mse_lasso, mse_tree, mse_rf)
+names=c("Subset selection", "Lasso", "Tree", "Random forest")
+mse_range = linspace(0,0.2,101)
+plot(mses, axes=FALSE, xlab = 'Methods', ylab = 'MSE')
+axis(1, at=1:4, lab=names)
+axis(2,mse_range)
+box()
+
+print("the MSEs: ")
+for (i in c(1,2,3,4)){
+  print(paste(names[i], sep = ": ", round(mses[i], 4)))
+}
 
 ```
 
-We see that the tree has the clearly highest mse, and the random forest the best. skriv noe om relationship between price og covariates. 
+We see that the regression tree has a substantially higher MSE than the rest, and that the random forest has the best MSE. This also indicated that the regression tree will provide us with the least information about the realtion between the covariates and the price. This coincides with what we have previously observed, where the regression tree only takes two covariates into account in the prediction. 
 
+Even though the remaining models have approximately equal MSE, some of them gives easier insight into the relationship between the covariates and the price. The random forest method for instance, operates as a black box, and thus give little information about the effect of the different covariates on the response value. 
 
+In both the subset selection method and the lasso method, the value of the regression parameters and which covariates are included in the resulting model indicates how the different covariates influence the response. The subset selection model gives a clear result of which covariates are considered significant, which provides an easily interpretable model. For instance, one can quickly conclude on which covariates does not have a high influence on the price by looking at the result from the subset selection. 
+
+The lasso regression, in addition to removing the completely insignificant covariates, also shrinks the value of the coefficiants of the less significant covariates. This means that one can get an impression of what covariate has the most influence on the response variable as well. In our case, we see that the logcarat coeffeicient is substantially higher than the rest. This coincides well with our initial interpretation that the carat is the one covariate that influences the price the most. However, one should notice that this method of interpreting the model is not always correct, as regression coefficient also takes the value size of the covariates into account, meaning that covariates that contribute with lower values might have coefficients of higher values without being more significant.
 
 
 # Problem 2: Unsupervised learning [3 points]
@@ -424,14 +429,28 @@ ctest=flying$ctest
 **Q28:** Start by getting to know the _training data_, by producing summaries and plots. Write a few sentences about what you observe and include your top 3 informative plots and/or outputs.
 ```{r}
 
+flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
+ctrain=flying$ctrain
+ctest=flying$ctest
+
 library(GGally)
-#summary(ctrain)
-#str(ctrain)
-#Tror at disse head-tingene bare vil ta med de første 6 personene, hvorfor det???
-#head(ctrain)
+head(ctrain) #viser den første delen av dataframen 
+summary(ctrain) #gir info om vanlige verdier for kovariatene
+str(ctrain) #en kompkt måte å se hvordan datasettet ser ut 
+head(ctrain) #viser den første delen av dataframen 
 ctrain$diabetes = as.factor(ctrain$diabetes)
 ggpairs(ctrain, aes(color=diabetes))
 ```
+Firstly, it is always a good idea when working with a new data set to get an impression of how the data frame is constructed. We thus include the head output, which simply prints the first six rows of our data frame. 
+
+Secondly, to get an impression of how the values of the covariates are, we print the summary of the data frame. This can be useful for instance if we wanted to perform regression on the data set later, because it would make it easier to interpret the regression coefficients. The summary for instance tells us that the data set only includes persons of the age from 21 to 70, and that the median value of `ped` is 0.4, which people outside the medical profession probably do no know beforehand. This knowledge can for instance help preventing interpreting larger regression coefficient values for `ped` as that coefficiant being more significant, as it might just be an adjustment for the `ped` values being lower in general. KAN GODT KUNNE NED LITT PÅ DETTE, HAR LITT SVADATENDENSER? 
+
+Lastly, we have included a pair plot to investigate how the different covariates influences the response variable, and also how they relate to each other. In an ideal model, all of the covariates are independent, to avoid multicollinearity, and so one should check whether this is in fact true for our model. We see from the correlation plots that most of the covariates have low correlation, with the exeption of `skin` and `bmi`, and `npreg` and `age`. 
+The plots on the diagonal show the frequency of the different covariate values for people with and without diabetes. Looking at these plots give a good indication of whether the specific covariate influence whether or not a person has diabetes. If the diabetes and non-diabetes sections does not overlap, this indicates that the covariate has an effect on the response. From our plot, we can then say that we expect that `npreg`, `glu`, `ped` and `age` are the covariates that influence whether a person has diabetes the most. 
+
+
+
+
 her tregner eg litt hjelp, heehheh
 lag noen flere plott, gjrø det jo litt lettere. 
 Correlation mellom skin og bmi. corr=0.64, pluss plottet ser korrelert ut. 
@@ -440,20 +459,20 @@ og bp og age??? ntjaaa
 kanskje npreg og age? ja. 
 
 
+Include pair plot to investigate for collinearity. 
 
 **Q29:** Use different methods to analyse the data. In particular use 
 
 * one method from Module 4: Classification   
 We choose logistic regression since we only have two responce classes. When using logistic regression, the model is based on probabilities that $Y=1$. That means the probability that a person has diabetes. In this case, this probability is calculated by 
-$$p(x_i)= p_i = \frac{e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}}
-{1+e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}}.   $$ 
+$$ p(x_i)= p_i = \frac{e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}}
+{1+e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}}.$$ 
 One can also write this as 
 $$ log \frac{p_i}{1-p_i} = {{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}.$$
+
 These coefficients are found using maximun likelihood estimation. In logistic regression we assume that the observations to be independent of each other, and the variables should not be to highly correlated with each other. As seen when plotting the variables with each other, one can observe some mutlicollinearity between `skin` and `bmi` as well as between `npreg` and `age`. The log-odds is the left side of the last equation. We require little or no linearity between the log-odds and the independent variables, and we also assume that we have a large sample size.    
 
 Fitting the model:
-
-
 ```{r}
 lrtrain=ctrain
 lrtest=ctest
@@ -496,19 +515,17 @@ glm_ROC
 
 The area under the ROC curve, hence the AUC, is calcualed to be 0.8451
 
-
-
-
-
-
-
 * one method from Module 8: Trees (and forests)
 
-We choose to use bagging to analyse the data. When using bagging one constucts bootstrap samples, and here we make 500 samples. A classification tree is made from each sample, $\hat{f}^{*b}$. $b=1...B$, where $B$ is the number of bootstrap samples. Then one avareage over these predictions. Each of these classification trees will have high variance and low bias, but when we average over the trees, the variance decreases. When we use bagging, we assume that the observations are independent.     
+We choose to use bagging to analyse the data. When using bagging one constucts bootstrap samples, and here we make $B=500$ samples. A big value of $B$ will not lead to overfitting, and at $500$ the errror has stabilised. A classification tree is made from each sample, $\hat{f}^{*b}$. $b=1...B$. Then one avareage over these predictions. Each of these classification trees will have high variance and low bias, but when we average over the trees, the variance decreases. When we use bagging, we assume that the observations are independent.     
 
 When using bagging instead of one simple classification tree, the variance is decreased, but this is on the cost of interpretability. When you average over multiple trees, you loose som of the interpretability that we find in classification trees. However it is possible to make varibale importance plots. Here the predictors are sorted based on their importance, where the more important predictors for either increase in MSE of node purity are placed further up than the less important ones. 
 
 ```{r bagging}
+flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
+ctrain=flying$ctrain
+ctest=flying$ctest
+
 rftrain=ctrain
 rftest=ctest
 library(randomForest)
@@ -516,8 +533,7 @@ set.seed(1)
 diab.bagging=randomForest(diabetes ~ ., data = rftrain, mtry=7, ntree=500, importance=TRUE)
 plot(diab.bagging)
 summary(diab.bagging)
-#Her skjer det noe rart:'(((
-#ikke nå lenger:))
+
 ```
 Her må du skrive hva du får ut av denne mdoellen:
 The number of bootstrap samples, $B$, is chosen such that the error has stabilised, and is often chosen to $300$ or $500$. We se that the error is clearly stabilised at $B=500$, and choose that to be the number of bootstrap samples. 
@@ -581,9 +597,6 @@ misclas_test_svm=(232-sum(diag(conf_test_svm)))/232
 print("Misclassification rate for the test data: ")
 misclas_test_svm 
 ```
-
-
-
 
 
 * one method from Module 11: Neural networks
