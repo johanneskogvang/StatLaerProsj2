@@ -40,20 +40,16 @@ install.packages("MASS")
 
 # Problem 1: Regression [6 points]
 
-```{r}
+```{r load diamonds}
 all=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/diamond.dd")
 dtrain=all$dtrain
 dtest=all$dtest
-
 ```
 
 **Q1**: Would you choose `price` or `logprice` as response variable? Justify your choice. Next, plot your choice of response pairwise with `carat`, `logcarat`, `color`, `clarity` and `cut`. Comment.
 ```{r plott}
-
-
 hist(dtrain$price)
 hist(dtrain$logprice)
-
 
 fit_price = lm(price ~ .-logprice, data=dtrain)
 rresprice = rstudent(fit_price)
@@ -61,7 +57,6 @@ rresprice = rstudent(fit_price)
 
 Looking at the histograms of price frequency for the `price` and `logprice` response variable, we see that while the `price` variable have much higher frequenies at lower values, the `logprice` variable is more evenly and symertically distributed for different values. We then want to use `logprice` as our response variable to more easily observe nuances in the data set. 
 We can observe the same by looking at Boxcox and residual plots for `price`and `logprice`. 
-
 
 ```{r plott2}
 library(ggplot2)
@@ -74,7 +69,7 @@ ggplot(fit_price, aes(.fitted, .stdresid)) + geom_point(pch = 21) +
        subtitle = deparse(fit_price$call))
 
 library(MASS)
-boxcox(fit_price, plotit=TRUE)
+boxcox(fit_price, plotit=TRUE, title = "BoxCox plot for price")
 
 fit_logprice = lm(logprice ~.-price, data=dtrain)
 library(ggplot2)
@@ -579,43 +574,7 @@ cat("Misclassification rate for the test data:", misclas_test_svm)
 
 
 * one method from Module 11: Neural networks
-We now use a machine learning technique based on neural networks. Because the application is classification with only two classes we use a network with only one output node. The input layer consists of one node for each covariate which gives an input layer with a total of 7 nodes. We use a method in R called `nnet` which uses one hidden layer where the number of hidden nodes can be varied to fit our problem. To see what works best in our case we will use bootstrapping to find the best choice for this tuning parameter.  
- 
-```{r neural networks} 
-#loading again because the data has to be unchanged 
-flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd") 
-ctrain=flying$ctrain 
-ctest=flying$ctest 
- 
-nntest = scale(ctest)
-nntrain = scale(ctrain) 
- 
-library(nnet) 
-library(NeuralNetTools) 
-library(pROC) 
- 
-#Bootstrapping to find best model: 
-set.seed(2) 
- 
-bs = tune(nnet, diabetes ~ ., data=nntrain, ranges=list(size=1:12)) 
- 
-nn_best_model=bs$best.model 
- 
-nn_prob_test=predict(nn_best_model, newdata=nntest) #jeg får ikke til , type="response" 
-nn_pred_test=ifelse(nn_prob_test>0.5, 1, 0) 
-conf_test_nn=table(nn_pred_test, ctest$diabetes) 
-conf_test_nn 
-misclas_test_nn=(length(ctest[, 1])-sum(diag(conf_test_nn)))/length(ctest[, 1]) 
-cat("Misclassification rate for the test data: ", misclas_test_nn) 
- 
-roc_curve = roc(response=ctest[,1], predictor=nn_prob_test, legacy.axes=TRUE) 
- 
-ggroc(roc_curve) + ggtitle("ROC curve for neural network model") 
- 
-``` 
-
-
-We now use a machine learning technique based on neural networks. Because the application is classification with only two classes we use a network with only one output node. The input layer consists of one node for each covariate which gives an input layer with a total of 7 nodes. We use a method in R called `nnet` which uses one hidden layer where the number of hidden nodes can be varied to fit our problem. To see what works best in our case we will use bootstrapping to find the best choice for this tuning parameter. 
+We now use a machine learning technique based on neural networks. Because the application is classification with only two classes we use a network with only one output node. The input layer consists of one node for each covariate which gives an input layer with a total of 7 nodes. We use a method in R called `nnet` which uses one hidden layer where the number of hidden nodes can be varied to fit our problem. To see what works best in our case we will use cross validation to find the best choice for this tuning parameter. 
 
 ```{r neural networks}
 #loading again because the data has to be unchanged
@@ -623,21 +582,33 @@ flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
 ctrain=flying$ctrain
 ctest=flying$ctest
 
-nntest = ctest
-nntrain = ctrain
+nntrain <- ctrain
+nntest <- ctest
+
+mean <- apply(ctrain, 2, mean)
+mean[1] = 0
+std <- apply(ctrain, 2, sd)
+std[1] = 1
+nn_train <- scale(nntrain, center=mean, scale=std)
+nn_test <- scale(nntest, center=mean, scale=std)
+
+nn_train.df <- as.data.frame(nn_train)
+nn_test.df <- as.data.frame(nn_test)
 
 library(nnet)
 library(NeuralNetTools)
 library(pROC)
 
-#Bootstrapping to find best model:
+#Cross validation to find best size of hidden layer
 set.seed(2)
 
-bs = tune(nnet, diabetes ~ ., data=nntrain, ranges=list(size=1:12))
+cv_nn = tune(nnet, diabetes ~ ., data=nn_train.df, ranges=list(size=1:40))
 
-nn_best_model=bs$best.model
+nn_best_model=cv_nn$best.model
 
-nn_prob_test=predict(nn_best_model, newdata=nntest) #jeg får ikke til , type="response"
+nn_prob_test=predict(nn_best_model, newdata=nn_test) #jeg får ikke til , type="response"
+nn_prob_test
+summary(nn_prob_test)
 nn_pred_test=ifelse(nn_prob_test>0.5, 1, 0)
 conf_test_nn=table(nn_pred_test, ctest$diabetes)
 conf_test_nn
