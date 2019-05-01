@@ -36,6 +36,9 @@ install.packages("pROC") #for ROC curves
 install.packages("e1071") # for support vector machines
 install.packages("nnet") # for feed forward neural networks
 install.packages("MASS")
+install.packages("devtools")
+install.packages("utils")
+install.packages("pracma")
 ```
 
 # Problem 1: Regression [6 points]
@@ -72,7 +75,7 @@ library(MASS)
 boxcox(fit_price, plotit=TRUE, title = "BoxCox plot for price")
 
 fit_logprice = lm(logprice ~.-price, data=dtrain)
-library(ggplot2)
+
 # residuls vs fitted
 ggplot(fit_logprice, aes(.fitted, .stdresid)) + geom_point(pch = 21) +
   geom_hline(yintercept = 0, linetype = "dashed") +
@@ -80,7 +83,7 @@ ggplot(fit_logprice, aes(.fitted, .stdresid)) + geom_point(pch = 21) +
   labs(x = "Fitted values", y = "Standardized residuals",
        title = "Fitted values vs. standardized residuals for logprice",
        subtitle = deparse(fit_logprice$call))
-library(MASS)
+
 boxcox(fit_logprice, plotit=TRUE)
 
 
@@ -585,6 +588,7 @@ ctest=flying$ctest
 nntrain <- ctrain
 nntest <- ctest
 
+#Normalizing the data to make them usable for the built-in R-functions and resetting them to data-frames
 mean <- apply(ctrain, 2, mean)
 mean[1] = 0
 std <- apply(ctrain, 2, sd)
@@ -597,28 +601,32 @@ nn_test.df <- as.data.frame(nn_test)
 
 library(nnet)
 library(NeuralNetTools)
-library(pROC)
 
 #Cross validation to find best size of hidden layer
 set.seed(2)
 
-cv_nn = tune(nnet, diabetes ~ ., data=nn_train.df, ranges=list(size=1:40))
+cv_nn = tune(nnet, diabetes ~ ., data=nn_train.df, ranges=list(size=1:15))
 
 nn_best_model=cv_nn$best.model
-
-nn_prob_test=predict(nn_best_model, newdata=nn_test) #jeg får ikke til , type="response"
-nn_prob_test
-summary(nn_prob_test)
+nn_best_model
+nn_prob_test=predict(nn_best_model, newdata=nn_test.df) #jeg får ikke til , type="response"
 nn_pred_test=ifelse(nn_prob_test>0.5, 1, 0)
 conf_test_nn=table(nn_pred_test, ctest$diabetes)
 conf_test_nn
 misclas_test_nn=(length(ctest[, 1])-sum(diag(conf_test_nn)))/length(ctest[, 1])
 cat("Misclassification rate for the test data: ", misclas_test_nn)
 
-roc_curve = roc(response=ctest[,1], predictor=nn_prob_test, legacy.axes=TRUE)
+library(devtools)
+source_url('https://gist.githubusercontent.com/fawda123/7471137/raw/466c1474d0a505ff044412703516c34f1a4684a5/nnet_plot_update.r')
+plot.nnet(nn_best_model)
 
-ggroc(roc_curve) + ggtitle("ROC curve for neural network model")
 
+```
+We see from the results that the size of the hidden layer is set to only one node and the misclassification rate is 19,8% for the fitted model. This means that a quite small model was enough to predict as well as earlier models. It is 
+
+```{r ROC neural nets}
+par(pty='s')
+roc_curve = roc(response=ctest[,1], predictor=nn_prob_test, legacy.axes=TRUE, plot=TRUE)
 ```
 
 
