@@ -270,18 +270,15 @@ The main difference between random forest and boosting is that in random forest 
 
 **Q18:** Fit a random forest to the diamond data with `logprice` as the response (and the same covariates as before). Comment on your choice of parameter (as decribed in Q16).   
 
-SKRIV MER HER!
+When using random forest, one usually choose $m \approx \sqrt{p}$, which in this case means that $ m \approx \sqrt{9} = 3$. Also, the number of trees in the forest, B, needs to be chosen. A big $B$ will not lead to overfitting, so we need to choose it such that the error has stabilised. Common choises are $B=300$ and $B=500$, and here it looks like $B=300$ is sufficient. 
 
-```{r}
+The most common choices are $B=300$ and $B=500$. 
+
+```{r random forest 1}
 set.seed(300)
 library(randomForest)
-rf.logprice=randomForest(logprice~logcarat+cut+clarity+color+depth+table+xx+yy+zz, data=dtrain, mtry=3, ntree=300, importance=TRUE) #dette
-#default mtry=m er p/3 for regression, velger default. 
+rf.logprice=randomForest(logprice~logcarat+cut+clarity+color+depth+table+xx+yy+zz, data=dtrain, mtry=3, ntree=300, importance=TRUE)
 plot(rf.logprice)
-
-#hva skal vi velge B til å være? Skal væreså høy at erroren er stabilisert, dvs høyere enn 200 en plass tror jeg. 
-# i følge module pages er B som regel 300 eller 500. 300 ser vel bst ut her. 
-
 ```
 
 **Q19:** Make a variable importance plot and comment on the plot. Calculate and report the MSE of the test set (on the scale of `logprice`).  
@@ -320,11 +317,12 @@ for (i in c(1,2,3,4)){
 
 We see that the regression tree has a substantially higher MSE than the rest, and that the random forest has the best MSE. This also indicated that the regression tree will provide us with the least information about the realtion between the covariates and the price. This coincides with what we have previously observed, where the regression tree only takes two covariates into account in the prediction. 
 
-Even though the remaining models have approximately equal MSE, some of them gives easier insight into the relationship between the covariates and the price. The Random forest method for instance, operates as a black box, and thus give little information about the effect of the different covariates on the response value. 
+Even though the remaining models have approximately equal MSE, some of them gives easier insight into the relationship between the covariates and the price. The random forest method for instance, operates as a black box, and thus give little information about the effect of the different covariates on the response value. 
 
-In both the Subset selection method and the Lasso method, the value of the regression parameters and which covariates are included in the resulting model indicates how the different covariates influence the response. The Subset selection model gives a clear result of which covariates are considered significant, which provides an easily interpretable model. For instance, one can quicly conclude on which covariates does not have a high influence on the price by looking at the result from the subset selection. 
+In both the subset selection method and the lasso method, the value of the regression parameters and which covariates are included in the resulting model indicates how the different covariates influence the response. The subset selection model gives a clear result of which covariates are considered significant, which provides an easily interpretable model. For instance, one can quickly conclude on which covariates does not have a high influence on the price by looking at the result from the subset selection. 
 
-The Lasso regression, in addition to removing the completely insignificant covariates, also shrinks the value of the coefficiants of the less significant covariates. This means that one can get an impression of what covariate has the most influence on the response variable as well. In our case, we see that the logcarat coeffeicient is substantially higher than the rest. This coincides well with our initial interpretation that the carat is the one covariate that influences the price the most. However, one should notice that this method of interpreting the model is not always correct, as regression coefficient also takes the value size of the covariates into account, meaning that covariates that contribute with lower values might have coefficients of higher values without being more significant. LES GJENNOM OM DETTE GIR MENING FOR NOEN ANDRE. 
+The lasso regression, in addition to removing the completely insignificant covariates, also shrinks the value of the coefficiants of the less significant covariates. This means that one can get an impression of what covariate has the most influence on the response variable as well. In our case, we see that the logcarat coeffeicient is substantially higher than the rest. This coincides well with our initial interpretation that the carat is the one covariate that influences the price the most. However, one should notice that this method of interpreting the model is not always correct, as regression coefficient also takes the value size of the covariates into account, meaning that covariates that contribute with lower values might have coefficients of higher values without being more significant.
+
 
 # Problem 2: Unsupervised learning [3 points]
 
@@ -438,17 +436,11 @@ ctest=flying$ctest
 library(GGally)
 summary(ctrain) #gir info om vanlige verdier for kovariatene
 str(ctrain) #en kompkt måte å se hvordan datasettet ser ut 
-#Tror at disse head-tingene bare vil ta med de første 6 personene, hvorfor det???
 head(ctrain) #viser den første delen av dataframen 
 ctrain$diabetes = as.factor(ctrain$diabetes)
 ggpairs(ctrain, aes(color=diabetes))
 ```
-her tregner eg litt hjelp, heehheh
-lag noen flere plott, gjrø det jo litt lettere. 
-Correlation mellom skin og bmi. corr=0.64, pluss plottet ser korrelert ut. 
-kanskje correlation mellom ped og age?
-og bp og age??? ntjaaa
-kanskje npreg og age? ja. 
+
 
 Include pair plot to investigate for collinearity. 
 
@@ -456,15 +448,14 @@ Include pair plot to investigate for collinearity.
 
 * one method from Module 4: Classification   
 We choose logistic regression since we only have two responce classes. When using logistic regression, the model is based on probabilities that $Y=1$. That means the probability that a person has diabetes. In this case, this probability is calculated by 
-$$p(x_i)= p_i = \frac{e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}}
-{1+e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}}.   $$ 
+$$ p(x_i)= p_i = \frac{e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}}
+{1+e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}}.$$ 
 One can also write this as 
 $$ log \frac{p_i}{1-p_i} = {{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}.$$
 
 These coefficients are found using maximun likelihood estimation. In logistic regression we assume that the observations to be independent of each other, and the variables should not be to highly correlated with each other. As seen when plotting the variables with each other, one can observe some mutlicollinearity between `skin` and `bmi` as well as between `npreg` and `age`. The log-odds is the left side of the last equation. We require little or no linearity between the log-odds and the independent variables, and we also assume that we have a large sample size.    
+
 Fitting the model:
-
-
 ```{r}
 lrtrain=ctrain
 lrtest=ctest
@@ -515,11 +506,15 @@ The area under the ROC curve, hence the AUC, is calcualed to be 0.8451
 
 * one method from Module 8: Trees (and forests)
 
-We choose to use bagging to analyse the data. When using bagging one constucts bootstrap samples, and here we make 500 samples. A classification tree is made from each sample, $\hat{f}^{*b}$. $b=1...B$, where $B$ is the number of bootstrap samples. Then one avareage over these predictions. Each of these classification trees will have high variance and low bias, but when we average over the trees, the variance decreases. When we use bagging, we assume that the observations are independent.     
+We choose to use bagging to analyse the data. When using bagging one constucts bootstrap samples, and here we make $B=500$ samples. A big value of $B$ will not lead to overfitting, and at $500$ the errror has stabilised. A classification tree is made from each sample, $\hat{f}^{*b}$. $b=1...B$. Then one avareage over these predictions. Each of these classification trees will have high variance and low bias, but when we average over the trees, the variance decreases. When we use bagging, we assume that the observations are independent.     
 
 When using bagging instead of one simple classification tree, the variance is decreased, but this is on the cost of interpretability. When you average over multiple trees, you loose som of the interpretability that we find in classification trees. However it is possible to make varibale importance plots. Here the predictors are sorted based on their importance, where the more important predictors for either increase in MSE of node purity are placed further up than the less important ones. 
 
 ```{r bagging}
+flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
+ctrain=flying$ctrain
+ctest=flying$ctest
+
 rftrain=ctrain
 rftest=ctest
 library(randomForest)
