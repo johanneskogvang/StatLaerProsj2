@@ -631,10 +631,23 @@ cat("Misclassification rate for the test data: ", misclas_test_nn)
 
 roc_curve = roc(response=ctest[,1], predictor=nn_prob_test, legacy.axes=TRUE)
 
-ggroc(roc_curve) + ggtitle("ROC curve for neural network model")
+rel_imp <- garson(nn_best_model, bar_plot = FALSE)$rel_imp
+cols <- colorRampPalette(c( 'lightgreen', 'darkgreen'))(7)[rank(rel_imp)]
+plotnet(nn_best_model, circle_col = list(cols, 'lightblue'))
+
+ctrain[1,]
+
 
 ```
+We see from the results that the size of the hidden layer is set to only one node (the visualization is shown above) and the misclassification rate is 19,8% for the fitted model. This means that a quite small model was enough to predict as well as earlier models. To interpret the model we look at the relative importance of the imput nodes and see, as we did before, that the covariates `glu`, `bmi`, `ped` and `age` are the most important covariates (the darkest green imply most important). Another notable fact is that all covariates are used, so everyone is considered significant enough to be included. If not a neural net would have set the weight to zero.  
 
+```{r ROC neural nets}
+par(pty='s')
+roc_curve = roc(response=ctest[,1], predictor=nn_prob_test, legacy.axes=TRUE, plot=TRUE)
+cat("AUC: Area under curve:", roc_curve$auc)
+
+```
+The neural net that where trained to solve the problem worked over all very well. The misclassification rate where as good as in the earlier methods and it chose a small model with only one hidden node that also made it easier to understand the model. We also see from the ROC-curve and AUC that it looks good and preforms better than random guessing.
 
 For each method you 
 
