@@ -487,8 +487,6 @@ library(pROC)
 par(pty='s')
 glm_ROC = roc(lrtest[ ,1], diab.glm_prob, plot=TRUE, legacy.axces=TRUE)
 glm_ROC
-
-
 ```
 
 The area under the ROC curve, hence the AUC, is calcualed to be 0.8451
@@ -511,7 +509,7 @@ ctrain=flying$ctrain
 ctest=flying$ctest
 
 library(randomForest)
-set.seed(1)
+set.seed(2)
 diab.bagging=randomForest(diabetes ~ ., data = ctrain, mtry=7, ntree=500, importance=TRUE)
 plot(diab.bagging)
 summary(diab.bagging)
@@ -587,14 +585,12 @@ summary(svm_prob_test)
 #summary(svm_pred_test)
 conf_test_svm = table(svm_prob_test, svmtest$diabetes)
 conf_test_svm
-misclas_test_svm = (length(svm_prob_test)-sum(diag(conf_test_svm))) / length(svm_prob_test)
-print("Misclassification rate for the test data: ")
-misclas_test_svm
+misclas_test_svm=(232-sum(diag(conf_test_svm)))/232
+cat("Misclassification rate for the test data:", misclas_test_svm)
 
 par(pty='s')
-svm_ROC = roc(svmtest[ ,1], svm_prob_test, plot=TRUE, legacy.axes=TRUE)
+svm_ROC=roc(ctest[ ,1], svm_prob_test, plot=TRUE, legacy.axes=TRUE)
 svm_ROC
-
 ```
 
 
