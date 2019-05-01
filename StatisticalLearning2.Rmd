@@ -36,9 +36,6 @@ install.packages("pROC") #for ROC curves
 install.packages("e1071") # for support vector machines
 install.packages("nnet") # for feed forward neural networks
 install.packages("MASS")
-install.packages("devtools")
-install.packages("utils")
-install.packages("pracma")
 ```
 
 # Problem 1: Regression [6 points]
@@ -75,7 +72,7 @@ library(MASS)
 boxcox(fit_price, plotit=TRUE, title = "BoxCox plot for price")
 
 fit_logprice = lm(logprice ~.-price, data=dtrain)
-
+library(ggplot2)
 # residuls vs fitted
 ggplot(fit_logprice, aes(.fitted, .stdresid)) + geom_point(pch = 21) +
   geom_hline(yintercept = 0, linetype = "dashed") +
@@ -83,7 +80,7 @@ ggplot(fit_logprice, aes(.fitted, .stdresid)) + geom_point(pch = 21) +
   labs(x = "Fitted values", y = "Standardized residuals",
        title = "Fitted values vs. standardized residuals for logprice",
        subtitle = deparse(fit_logprice$call))
-
+library(MASS)
 boxcox(fit_logprice, plotit=TRUE)
 
 
@@ -550,40 +547,29 @@ The $AUC$ is $0.8288$.
 
 
 * one method from Module 9: Support vector machines
-We choose the support vector machines method, with a radial kernel, the cost of violating the margin = 10, and $\gamma$ = 0.001. The radial kernel is chosen because it is efficient and helps avoid overfitting of the data. The radial kernel is defined as
-
-$$ K(\textbf{x}_i, \textbf{x}_i') = \text{exp}(- \gamma \sum_{j = 1}^{p}(x_{ij} - x_{i'j})^2)  $$
-where $\gamma$ is a tuning parameter and $p$ is the number of covariates. We find the optimal values for the margin violation cost and $\gamma$ by the function tune() in R. This results in a model where the width of the margin is 0.1, as seen from the summary of the selected model. 
-
-We notice that the model uses a quite large number of support vectors, 258 out of 300 possible. This could give us suspicions that the model is overfitted, but since the misclassification error is still rather low, it does not seem to be a substantial problem. ENDRE DETTE HVIS RESULTATET ENDRER SEG!
+We choose the support vector machines method. 
 
 
 ```{r svm}
-library(e1071)
-library(pROC)
 flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
 ctrain=flying$ctrain
 ctest=flying$ctest
 
 svmtrain=ctrain
 svmtest=ctest
-
+library(e1071)
 set.seed(2)
-
-svm_ker_rad = tune(svm, diabetes ~ ., data=svmtrain, kernel="radial", ranges=list(gamma=c( 10^-3,0.001,0.01,0.1,1,10), cost=c(0.001, 0.01, 0.1, 1, 10, 100)))
-
-#svm_ker_rad = tune(svm, diabetes ~ ., data=svmtrain, kernel="polynomial", degree = 4, ranges=list(gamma=c( 10^-3,0.001,0.01,0.1,1,10), cost=c(0.001, 0.01, 0.1, 1, 10, 100)))
-
-summary(svm_ker_rad)
-svm_best_model=svm_ker_rad$best.model
+CV_radial = tune(svm, diabetes ~ ., data=sctrain, kernel="radial", ranges=list(gamma=c(10^-5, 10^-4,0.001,0.01,0.1,1,2,3,4,5), cost=c(0.001, 0.01, 0.1, 1, 5, 10, 20,40,80,100,120,140,160)))
+#summary(CV_radial)
+#best: gamma=0.001, cost=5
+svm_best_model=CV_radial$best.model
 summary(svm_best_model)
 
 #Finding miclassification rate for the test set:
-svm_prob_test = predict(svm_best_model, newdata=ctest, type="response")
+svm_prob_test=predict(svm_best_model, newdata=svmtest, type="response")
 summary(svm_prob_test)
-#svm_pred_test = ifelse(svm_prob_test > 0.5, 1, 0)
-#summary(svm_pred_test)
-conf_test_svm = table(svm_prob_test, svmtest$diabetes)
+svm_pred_test=ifelse(svm_prob_test>0.5, 1, 0)
+conf_test_svm=table(svm_pred_test, ctest$diabetes)
 conf_test_svm
 misclas_test_svm=(232-sum(diag(conf_test_svm)))/232
 cat("Misclassification rate for the test data:", misclas_test_svm)
@@ -606,7 +592,6 @@ ctest=flying$ctest
 nntrain <- ctrain
 nntest <- ctest
 
-#Normalizing the data to make them usable for the built-in R-functions and resetting them to data-frames
 mean <- apply(ctrain, 2, mean)
 mean[1] = 0
 std <- apply(ctrain, 2, sd)
@@ -619,32 +604,28 @@ nn_test.df <- as.data.frame(nn_test)
 
 library(nnet)
 library(NeuralNetTools)
+library(pROC)
 
 #Cross validation to find best size of hidden layer
 set.seed(2)
 
-cv_nn = tune(nnet, diabetes ~ ., data=nn_train.df, ranges=list(size=1:15))
+cv_nn = tune(nnet, diabetes ~ ., data=nn_train.df, ranges=list(size=1:40))
 
 nn_best_model=cv_nn$best.model
-nn_best_model
-nn_prob_test=predict(nn_best_model, newdata=nn_test.df) #jeg får ikke til , type="response"
+
+nn_prob_test=predict(nn_best_model, newdata=nn_test) #jeg får ikke til , type="response"
+nn_prob_test
+summary(nn_prob_test)
 nn_pred_test=ifelse(nn_prob_test>0.5, 1, 0)
 conf_test_nn=table(nn_pred_test, ctest$diabetes)
 conf_test_nn
 misclas_test_nn=(length(ctest[, 1])-sum(diag(conf_test_nn)))/length(ctest[, 1])
 cat("Misclassification rate for the test data: ", misclas_test_nn)
 
-library(devtools)
-source_url('https://gist.githubusercontent.com/fawda123/7471137/raw/466c1474d0a505ff044412703516c34f1a4684a5/nnet_plot_update.r')
-plot.nnet(nn_best_model)
+roc_curve = roc(response=ctest[,1], predictor=nn_prob_test, legacy.axes=TRUE)
 
+ggroc(roc_curve) + ggtitle("ROC curve for neural network model")
 
-```
-We see from the results that the size of the hidden layer is set to only one node and the misclassification rate is 19,8% for the fitted model. This means that a quite small model was enough to predict as well as earlier models. It is 
-
-```{r ROC neural nets}
-par(pty='s')
-roc_curve = roc(response=ctest[,1], predictor=nn_prob_test, legacy.axes=TRUE, plot=TRUE)
 ```
 
 
