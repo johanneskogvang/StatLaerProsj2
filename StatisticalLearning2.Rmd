@@ -85,6 +85,7 @@ boxcox(fit_logprice, plotit=TRUE)
 
 
 ```
+    
 We see that in the BoxCox plots, the lambda value at maximum log-likelihood is closer to one for the logprice than for price. When lambda is close to one it means that one should use the model that is plotted. Also, we want the residuals to be independent of each other, meaning they are randomly spread and that we do not see a pattern in the residual plot. We also we want their variance to be constant. Therefore we choose to use the logprice as responce variable. 
 
 We now plot `logprice` with `carat`, `logcarat`, `color`, `clarity` and `cut`.
