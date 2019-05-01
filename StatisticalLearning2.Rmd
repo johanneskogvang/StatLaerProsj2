@@ -97,7 +97,7 @@ plot(dtrain$clarity, dtrain$logprice, main = 'Clarity vs logprice')
 plot(dtrain$cut, dtrain$logprice, main = 'Cut vs logprice')
 ```
 
-From both the plot with `carat` and `logcarat` we observe a clear indication that higher carat leads to a higher price, which is expected. The relation between `logcarat` and `logprice` seems to be linear, which indicates that the price grows linearly with the carat. 
+From both the plot with `carat` and `logcarat` we observe a clear indication that higher carat leads to a higher price, which is expected. The relation between `logcarat` and `logprice` seems to be linear. 
 
 The relation between `logprice`and `clarity` is less apparent. Looking at the medians and the mid 50 percentiles, is seems as though the price decreses with better clarity, which is counterintuitive. We do however, observe that many outliers in the most extreme observations, and that the whiskers for most of the clarities cover mostly the entire price range. This indicates that the clarity has little influence on the diamond price. 
 
@@ -215,18 +215,13 @@ The MSE of the lasso regression is $0.00363693$, in the `logprice` scale.
 
 
 
-**Q11:** A regression tree to model is built using a _greedy_ approach. What does that mean? Explain the strategy used for constructing a regression tree. 
-When using a greedy approach one always takes the locally best choice, not thinking about what happens next or in the big picture. When using a greedy approach constructing a regression tree, one will always make the best splits, meaning one will choose the split that reduces the RSS the most. 
+**Q11:** When using a greedy approach one always takes the locally best choice, not thinking about what happens next or in the big picture. When using a greedy approach constructing a regression tree, one will always make the best splits, meaning one will choose the split that reduces the RSS the most. 
 
 When constructing a regression tree one uses the top-down implementation with the greedy approach. One starts at the top where all observations belong to one single region. Then this region is split into two new branches, choosing the split with the highest reduction in the RSS. The next split in the tree is also the split that reduces the RSS the most, and so it continues until the desired number of regions is reached. All of these regions get one prediction each, which is the mean of the training data that falls into that region. 
 
-**Q12:** Is a regression tree a suitable method to handle both numerical and categorical covariates? Elaborate. 
+**Q12:** A regression tree will be a suitable method for both numerical and categorical covariates; it is when the response is categorical one should use a classification three instead. A regression tree can be used in most cses where normal linear regression can also be used, and it has the benefits that it is easier to interpret and that it can be simplified using bagging and boosting, etc. It can also be added that when constructing a regression tree with numerical covariates, one should choose the splits according to what produces the lowest MSE. 
 
-A regression tree will be a suitable method for both numerical and categorical covariates; it is when the response is categorical one should use a classification three instead. A regression tree can be used in most cses where normal linear regression can also be used, and it has the benefits that it is easier to interpret and that it can be simplified using bagging and boosting, etc. It can also be added that when constructing a regression tree with numerical covariates, one should choose the splits according to what produces the lowest MSE. 
-
-**Q13:** Fit a (full) regression tree to the diamond data with `logprice` as the response (and the same covariates as for c and d), and plot the result. Comment briefly on you findings. 
-
-From the drawing of the regression tree below, we see that it only sorts on the lenght and width of the diamond, which should indicate that these are the most important covariates when classifying the price of the diamond. However, the best subset selection method for instance indicates that many more of the parameters is more or equally significant to the lenght and that the width is in fact statistically insignificant. This means that we can expect some errors when prediciting with this model. 
+**Q13:** Below, we have fitted a regression tree to the diamond data with `logprice` as the response. From the drawing below, we see that it only sorts on the lenght and width of the diamond, which should indicate that these are the most important covariates when classifying the price of the diamond. However, the best subset selection method for instance indicates that many more of the parameters is more or equally significant to the lenght and that the width is in fact statistically insignificant. This means that we can expect some errors when prediciting with this model. 
 
 ```{r}
 library(tree)
@@ -240,12 +235,12 @@ text(tree.logprice, pretty=1)
 ```{r}
 tree_pred = predict(tree.logprice, newdata=dtest)
 mse_tree=mean((tree_pred - dtest$logprice)^2)
-mse_tree
-
+cat("The MSE of the regression tree is", mse_tree)
 ```
-The MSE of the regression tree is $0.01715548$.
+
 
 **Q15:** Explain the motivation behind bagging, and how bagging differs from random forest? What is the role of bootstrapping? 
+KAN NOEN ANDRE ENN JOHANNE SE OVER DENNE?? spesielt om jeg har svart på alle spørsmålene. 
 
 When we average over different observations, the variance is typically lower than for one single observation. One can use the bootstrap to find B repeated samples from the training data set, train each of the B sets, and then average on the trained models. This is called bootstrap aggregation, or bagging, and will reduce the variance of the model. 
 
@@ -254,21 +249,13 @@ Bagging can typically be used in regression trees, since using one single tree w
 (her kan man evt forklare hvorfor, mtp sterke prediktorer osv, men det er egentlig ikke en del av spørsmålet.)
 (har jeg svart nok på hva som er rollen til bootstrapping? Ja, synes det. )
 
-**Q16:** What are the parameter(s) to be set in random forest, and what are the rules for setting these?  
+**Q16:** In random forest one will have to choose the number of trees, B. A large B will not lead to overfitting, and therefore B is chosen sufficiently large, so that the error rate has settled. 
 
-In random forest one will have to choose the number of trees, B. A large B will not lead to overfitting, and therefore B is chosen sufficiently large, so that the error rate has settled. 
+The other parameter that needs to be set is the number of predictors used in each split, $m$. One typically chooses $m \approx \sqrt{p}$, where $p$ is the number of predictors. Then the algorithm is no longer allowed to choose splits based on the majority of the predictors. Then if one predictor is particulary strong, it will not be at the top of the trees as often as it would if bagging was used. Hence, the other predictors stand a chance, and the trees are decorrelated. 
 
-The other parameter that needs to be set is the number of predictors used in each split, m. One typically chooses $m \approx \sqrt{p}$, where $p$ is the number of predictors. Then the algorithm is no longer allowed to choose splits based on the majority of the predictors. Then if one predictor is particulary strong, it will not be at the top of the trees as often as it would if bagging was used. Hence, the other predictors stand a chance, and the trees are decorrelated. 
+**Q17:** The main difference between random forest and boosting is that in random forest each tree is constructed based on the bootstrapped sample from the training data, while in boosting the trees are build using the residuals, meaning that each tree is build using information from the previously built trees. This makes boosting an approach that learns slowly, which in general are approaches that perform well. 
 
-**Q17:** Boosting is a popular method. What is the main difference between random forest and boosting? 
-
-The main difference between random forest and boosting is that in random forest each tree is constructed based on the bootstrapped sample from the training data, while in boosting the trees are build using the residuals, meaning that each tree is build using information from the previously built trees. This makes boosting an approach that learns slowly, which in general are approaches that perform well. 
-
-**Q18:** Fit a random forest to the diamond data with `logprice` as the response (and the same covariates as before). Comment on your choice of parameter (as decribed in Q16).   
-
-When using random forest, one usually choose $m \approx \sqrt{p}$, which in this case means that $ m \approx \sqrt{9} = 3$. Also, the number of trees in the forest, B, needs to be chosen. A big $B$ will not lead to overfitting, so we need to choose it such that the error has stabilised. Common choises are $B=300$ and $B=500$, and here it looks like $B=300$ is sufficient. 
-
-The most common choices are $B=300$ and $B=500$. 
+**Q18:** When using random forest, one usually choose $m \approx \sqrt{p}$, which in this case means that $ m \approx \sqrt{9} = 3$. Also, the number of trees in the forest, B, needs to be chosen. A big $B$ will not lead to overfitting, so we need to choose it such that the error has stabilised. Common choices are $B=300$ and $B=500$, and here $B=300$ should be sufficient. 
 
 ```{r random forest 1}
 set.seed(300)
@@ -279,14 +266,13 @@ plot(rf.logprice)
 
 **Q19:** Make a variable importance plot and comment on the plot. Calculate and report the MSE of the test set (on the scale of `logprice`).  
 ```{r}
-varImpPlot(rf.logprice, type = 2)
+varImpPlot(rf.logprice)
 rf.pred=predict(rf.logprice, newdata=dtest)
 mse_rf=mean((rf.pred-dtest$logprice)^2)
-mse_rf
+cat("The MSE of the random forest",mse_rf)
 
 ```
-
-We see that $yy$ is the most important covariate when looking at node putiry, while $cut$ seems to be the least important. The MSE of the random forest is $0.002828014$.
+We see that `yy` is the most important covariate when looking at node putiry, while `cut` seems to be the least important. However, when we look at the MSE it seems like `clarity` is the most important covariate and that `zz` is less important. 
 
 **Q20:** Finally, compare the results from c (subset selection), d (lasso), e (tree) and f (random forest): Which method has given the best performance on the test set and which method has given you the best insight into the relationship between the price and the covariates?
 ```{r}
@@ -311,13 +297,13 @@ for (i in c(1,2,3,4)){
 
 ```
 
-We see that the regression tree has a substantially higher MSE than the rest, and that the random forest has the best MSE. This also indicated that the regression tree will provide us with the least information about the realtion between the covariates and the price. This coincides with what we have previously observed, where the regression tree only takes two covariates into account in the prediction. 
+We see that the regression tree has a substantially higher MSE than the rest, and that the random forest has the best MSE. This also indicated that the regression tree will provide us with the least information about the relation between the covariates and the price. This coincides with what we have previously observed, where the regression tree only takes two covariates into account in the prediction. 
 
 Even though the remaining models have approximately equal MSE, some of them gives easier insight into the relationship between the covariates and the price. The random forest method for instance, operates as a black box, and thus give little information about the effect of the different covariates on the response value. 
 
 In both the subset selection method and the lasso method, the value of the regression parameters and which covariates are included in the resulting model indicates how the different covariates influence the response. The subset selection model gives a clear result of which covariates are considered significant, which provides an easily interpretable model. For instance, one can quickly conclude on which covariates does not have a high influence on the price by looking at the result from the subset selection. 
 
-The lasso regression, in addition to removing the completely insignificant covariates, also shrinks the value of the coefficiants of the less significant covariates. This means that one can get an impression of what covariate has the most influence on the response variable as well. In our case, we see that the logcarat coeffeicient is substantially higher than the rest. This coincides well with our initial interpretation that the carat is the one covariate that influences the price the most. However, one should notice that this method of interpreting the model is not always correct, as regression coefficient also takes the value size of the covariates into account, meaning that covariates that contribute with lower values might have coefficients of higher values without being more significant.
+The lasso regression, in addition to removing the completely insignificant covariates, also shrinks the value of the coefficiants of the less significant covariates. This means that one can get an impression of what covariate has the most influence on the response variable as well. In our case, we see that the `logcarat` coefficient is substantially higher than the rest. This coincides well with our initial interpretation that the carat is the one covariate that influences the price the most. However, one should notice that this method of interpreting the model is not always correct, as regression coefficient also takes the value size of the covariates into account, meaning that covariates that contribute with lower values might have coefficients of higher values without being more significant.
 
 
 # Problem 2: Unsupervised learning [3 points]
