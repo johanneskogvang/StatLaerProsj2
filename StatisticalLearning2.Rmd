@@ -129,7 +129,7 @@ We now look at the main differences between using AIC and using Cross-validation
 
 **Q6:** See the code below for performing model selection with `bestglm()` based on AIC. What kind of contrast is used to represent `cut`, `color` and `clarity`? Write down the final best model and explain what you can interpret from the model.    
 
-To represent `cut`, the `fair cut` is removed and used as a reference. This means that if the cut goes from 'fair' to 'good' and no other covariates has changed, then the price is $\beta_{cutGood} =  0.028558$ higher. The same holds for `color` and `clairity`, where `colorD` and `clarityI1` are used as reference values. 
+To represent `cut`, the `fair cut` is removed and used as a reference. This means that all the other covariates linked to how good a cut is has $\beta$ values that represents the relative change from the price that would have been predicted for a `fair cut`. The same holds for the $\beta$ values linked to `color` and `clairity`, where `colorD` and `clarityI1` are used as reference values. 
 
 Looking at the summary of the `best subset model`, one can see that the best model is 
 $$ \text{logprice} =\beta_{\text{intercept}} + \beta_{\text{logcarat}} \cdot x_{\text{logcarat}} + \beta_{\text{cutGood}}\cdot x_{\text{cutGood}} + \beta_{\text{cutVeryGood}}\cdot x_{\text{cutVeryGood}} +\beta_{\text{cutPremium}}\cdot x_{\text{cutPremium}} + \beta_{\text{cutIdeal}}\cdot x_{\text{cutIdeal}} \\ 
@@ -154,28 +154,25 @@ summary(fit_bsm)
 ```
 
 
-**Q7:** Calculate and report the MSE of the test set using the best model (on the scale of `logprice`).  
+**Q7:**  
 
 ```{r,eval=FALSE}
 
 pred_bsm = predict(fit_bsm, newdata=dtest)
 mse_bsm = mean((dtest$logprice - pred_bsm)^2)
-mse_bsm
-
+cat("Using the best model, the MSE is calculated to be", mse_bsm)
 ```
-Using the best model, the MSE is calculated to be $0.003600305$.
 
 **Q8:** Build a model matrix for the covariates `~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1`. What is the dimension of this matrix?  
 ```{r}
-#tar -1 fordi vi ikke il ha med intercept i lasso. vil ikke at den coariaten skal bli null. 
+#using the -1 to prevent lasso from removing the indercept.
 x_train = model.matrix(logprice~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1, data=dtrain)
-dim(x_train)
+cat("The dimension of the model matrix using logcarat, cut, clarity, color, depth, table, xx, yy and zz is: (",dim(x_train)[1], "x", dim(x_train)[2],").")
 
 ```
-The dimension of this matrix is $5000 \times 24$. 
 
-
-**Q9:** Fit a lasso regression to the diamond data with `logprice` as the response and the model matrix given in Q8. How did you find the value to be used for the regularization parameter?  
+**Q9:** 
+We fit a lasso regression to the diamond data with `logprice` as the response and use the model matrix from question 8.
 ```{r}
 y_train = dtrain$logprice
 library(glmnet)
@@ -186,14 +183,12 @@ plot(cv.out)
 best_lambda_lasso = cv.out$lambda.min
 best_lambda_lasso
 
-#lager en modell med denne lambdaen
+#we fit a model using the lambda found above
 fit_lasso = glmnet(x_train,y_train,alpha=1, lambda=best_lambda_lasso) 
 coef(fit_lasso)
 
 ```
-
-We find the value to be used for the regularzation parameter, $\lambda$, using crossvalidation.  
-
+The value for the regularization parameter, $\lambda$, was found using cross validation.
 
 **Q10:** Calculate and report the MSE of the test set (on the scale of `logprice`).  
 ```{r}
@@ -205,12 +200,8 @@ lasso_square_errors = ((lasso_predictions-y_test)^2)
 
 
 mse_lasso=mean(lasso_square_errors)
-mse_lasso
+cat("The MSE of the test set (on the scale of logprice) is calculated to be", mse_lasso)
 ```
-
-The MSE of the lasso regression is $0.00363693$, in the `logprice` scale.
-
-
 
 **Q11:** When using a greedy approach one always takes the locally best choice, not thinking about what happens next or in the big picture. When using a greedy approach constructing a regression tree, one will always make the best splits, meaning one will choose the split that reduces the RSS the most. 
 
