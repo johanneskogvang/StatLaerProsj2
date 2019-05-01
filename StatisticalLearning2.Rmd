@@ -36,24 +36,23 @@ install.packages("pROC") #for ROC curves
 install.packages("e1071") # for support vector machines
 install.packages("nnet") # for feed forward neural networks
 install.packages("MASS")
+install.packages("devtools")
+install.packages("utils")
+install.packages("pracma")
 ```
 
 # Problem 1: Regression [6 points]
 
-```{r}
+```{r load diamonds}
 all=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/diamond.dd")
 dtrain=all$dtrain
 dtest=all$dtest
-
 ```
 
 **Q1**: Would you choose `price` or `logprice` as response variable? Justify your choice. Next, plot your choice of response pairwise with `carat`, `logcarat`, `color`, `clarity` and `cut`. Comment.
 ```{r plott}
-
-
 hist(dtrain$price)
 hist(dtrain$logprice)
-
 
 fit_price = lm(price ~ .-logprice, data=dtrain)
 rresprice = rstudent(fit_price)
@@ -61,7 +60,6 @@ rresprice = rstudent(fit_price)
 
 Looking at the histograms of price frequency for the `price` and `logprice` response variable, we see that while the `price` variable have much higher frequenies at lower values, the `logprice` variable is more evenly and symertically distributed for different values. We then want to use `logprice` as our response variable to more easily observe nuances in the data set. 
 We can observe the same by looking at Boxcox and residual plots for `price`and `logprice`. 
-
 
 ```{r plott2}
 library(ggplot2)
@@ -74,10 +72,10 @@ ggplot(fit_price, aes(.fitted, .stdresid)) + geom_point(pch = 21) +
        subtitle = deparse(fit_price$call))
 
 library(MASS)
-boxcox(fit_price, plotit=TRUE)
+boxcox(fit_price, plotit=TRUE, title = "BoxCox plot for price")
 
 fit_logprice = lm(logprice ~.-price, data=dtrain)
-library(ggplot2)
+
 # residuls vs fitted
 ggplot(fit_logprice, aes(.fitted, .stdresid)) + geom_point(pch = 21) +
   geom_hline(yintercept = 0, linetype = "dashed") +
@@ -85,7 +83,7 @@ ggplot(fit_logprice, aes(.fitted, .stdresid)) + geom_point(pch = 21) +
   labs(x = "Fitted values", y = "Standardized residuals",
        title = "Fitted values vs. standardized residuals for logprice",
        subtitle = deparse(fit_logprice$call))
-library(MASS)
+
 boxcox(fit_logprice, plotit=TRUE)
 
 
@@ -434,29 +432,12 @@ ctrain=flying$ctrain
 ctest=flying$ctest
 
 library(GGally)
-head(ctrain) #viser den første delen av dataframen 
 summary(ctrain) #gir info om vanlige verdier for kovariatene
 str(ctrain) #en kompkt måte å se hvordan datasettet ser ut 
 head(ctrain) #viser den første delen av dataframen 
 ctrain$diabetes = as.factor(ctrain$diabetes)
 ggpairs(ctrain, aes(color=diabetes))
 ```
-Firstly, it is always a good idea when working with a new data set to get an impression of how the data frame is constructed. We thus include the head output, which simply prints the first six rows of our data frame. 
-
-Secondly, to get an impression of how the values of the covariates are, we print the summary of the data frame. This can be useful for instance if we wanted to perform regression on the data set later, because it would make it easier to interpret the regression coefficients. The summary for instance tells us that the data set only includes persons of the age from 21 to 70, and that the median value of `ped` is 0.4, which people outside the medical profession probably do no know beforehand. This knowledge can for instance help preventing interpreting larger regression coefficient values for `ped` as that coefficiant being more significant, as it might just be an adjustment for the `ped` values being lower in general. KAN GODT KUNNE NED LITT PÅ DETTE, HAR LITT SVADATENDENSER? 
-
-Lastly, we have included a pair plot to investigate how the different covariates influences the response variable, and also how they relate to each other. In an ideal model, all of the covariates are independent, to avoid multicollinearity, and so one should check whether this is in fact true for our model. We see from the correlation plots that most of the covariates have low correlation, with the exeption of `skin` and `bmi`, and `npreg` and `age`. 
-The plots on the diagonal show the frequency of the different covariate values for people with and without diabetes. Looking at these plots give a good indication of whether the specific covariate influence whether or not a person has diabetes. If the diabetes and non-diabetes sections does not overlap, this indicates that the covariate has an effect on the response. From our plot, we can then say that we expect that `npreg`, `glu`, `ped` and `age` are the covariates that influence whether a person has diabetes the most. 
-
-
-
-
-her tregner eg litt hjelp, heehheh
-lag noen flere plott, gjrø det jo litt lettere. 
-Correlation mellom skin og bmi. corr=0.64, pluss plottet ser korrelert ut. 
-kanskje correlation mellom ped og age?
-og bp og age??? ntjaaa
-kanskje npreg og age? ja. 
 
 
 Include pair plot to investigate for collinearity. 
@@ -473,13 +454,12 @@ $$ log \frac{p_i}{1-p_i} = {{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {
 These coefficients are found using maximun likelihood estimation. In logistic regression we assume that the observations to be independent of each other, and the variables should not be to highly correlated with each other. As seen when plotting the variables with each other, one can observe some mutlicollinearity between `skin` and `bmi` as well as between `npreg` and `age`. The log-odds is the left side of the last equation. We require little or no linearity between the log-odds and the independent variables, and we also assume that we have a large sample size.    
 
 Fitting the model:
-```{r}
+```{r logistic regression}
 lrtrain=ctrain
 lrtest=ctest
 library(glmnet)
-diab.glm = glm(diabetes ~ ., data = lrtrain, family = "binomial")
+diab.glm = glm(diabetes ~ ., data = ctrain, family = "binomial")
 summary(diab.glm)
-
 ```
 
 If we look at the summary of the model, we see that there are three significate covariates woth p-value less than $0.05$. These are `glu`, `bmi` and `ped`, which in fact all have p-values less than $0.01$. The covariates `bp` and `skin` have rather high p-values, which means that they may not be that important in the model. 
@@ -487,15 +467,13 @@ If we look at the summary of the model, we see that there are three significate 
 
 
 Evaluation of the model:
-```{r}
+```{r log reg eval}
 diab.glm_prob=predict(diab.glm, newdata=lrtest, type="response")
 diab.glm_pred=ifelse(diab.glm_prob > 0.5, 1, 0)
 conf_test=table(diab.glm_pred, lrtest$diabetes)
 conf_test
 misclass_test = (232-sum(diag(conf_test)))/232
 misclass_test
-
-#summary(diab.glm_prob)
 ```
 
 
@@ -515,9 +493,15 @@ glm_ROC
 
 The area under the ROC curve, hence the AUC, is calcualed to be 0.8451
 
+
+
+
+
+
+
 * one method from Module 8: Trees (and forests)
 
-We choose to use bagging to analyse the data. When using bagging one constucts bootstrap samples, and here we make $B=500$ samples. A big value of $B$ will not lead to overfitting, and at $500$ the errror has stabilised. A classification tree is made from each sample, $\hat{f}^{*b}$. $b=1...B$. Then one averages over these predictions. Each of these classification trees will have high variance and low bias, but when we average over the trees, the variance decreases. When we use bagging, we assume that the observations are independent.     
+We choose to use bagging to analyse the data. When using bagging one constucts bootstrap samples, and here we make $500$ samples. A classification tree is made from each sample, $\hat{f}^{*b}$. $b=1...B$, where $B$ s the number of bootstrap samples. Then one avareage over these predictions. Each of these classification trees will have high variance and low bias, but when we average over the trees, the variance decreases. When we use bagging, we assume that the observations are independent.     
 
 When using bagging instead of one simple classification tree, the variance is decreased, but this is on the cost of interpretability. When you average over multiple trees, you loose som of the interpretability that we find in classification trees. However it is possible to make varibale importance plots. Here the predictors are sorted based on their importance, where the more important predictors for either increase in MSE of node purity are placed further up than the less important ones. 
 
@@ -526,11 +510,9 @@ flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
 ctrain=flying$ctrain
 ctest=flying$ctest
 
-rftrain=ctrain
-rftest=ctest
 library(randomForest)
 set.seed(1)
-diab.bagging=randomForest(diabetes ~ ., data = rftrain, mtry=7, ntree=500, importance=TRUE)
+diab.bagging=randomForest(diabetes ~ ., data = ctrain, mtry=7, ntree=500, importance=TRUE)
 plot(diab.bagging)
 summary(diab.bagging)
 
@@ -542,17 +524,15 @@ The number of bootstrap samples, $B$, is chosen such that the error has stabilis
 varImpPlot(diab.bagging)
 
 ```
-In the variance imporatance plots we see that $glu$ is the covariate that contributes the most to both increase in MSE and to increse in the node purity. Both $npreg$ and $bp$ contributes the least. HÆ? nå skjønner jeg ikke helt hva jeg har skrevet her?? 
-skrive mer utfyllende?
-
+In the variance importance plot we see that `glu` is the most important covariate both when it comes to increase in MSE when assigning random variables instead of the covariate and in increase of the Gini index when using thw covariate. One can also see that `npreg` and `bp` are the least important variables. 
 
 Evaluation of the model:
 
 Misclassification rate for the test data
 ```{r}
-diab.bag_prob=predict(diab.bagging, newdata=rftest, type="response")
+diab.bag_prob=predict(diab.bagging, newdata=ctest, type="response")
 diab.bag_pred=ifelse(diab.bag_prob>0.5, 1, 0)
-conf_test_bagging=table(diab.bag_pred, rftest$diabetes)
+conf_test_bagging=table(diab.bag_pred, ctest$diabetes)
 conf_test_bagging
 misclass_test_bagging = (232-sum(diag(conf_test_bagging)))/232
 misclass_test_bagging 
@@ -561,12 +541,10 @@ misclass_test_bagging
 
 
 ROC curve and AUC
-```{r}
-#Det er noe her som ikkke fungerer når man knitter????
-
+```{r ROC bagging}
 library(pROC)
 par(pty='s')
-bagging_ROC=roc(rftest[ ,1],diab.bag_prob, plot=TRUE, legacy.axes=TRUE)
+bagging_ROC=roc(ctest[ ,1], diab.bag_prob, plot=TRUE, legacy.axes=TRUE)
 bagging_ROC
 
 ```
@@ -621,6 +599,58 @@ svm_ROC
 
 
 * one method from Module 11: Neural networks
+We now use a machine learning technique based on neural networks. Because the application is classification with only two classes we use a network with only one output node. The input layer consists of one node for each covariate which gives an input layer with a total of 7 nodes. We use a method in R called `nnet` which uses one hidden layer where the number of hidden nodes can be varied to fit our problem. To see what works best in our case we will use cross validation to find the best choice for this tuning parameter. 
+
+```{r neural networks}
+#loading again because the data has to be unchanged
+flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
+ctrain=flying$ctrain
+ctest=flying$ctest
+
+nntrain <- ctrain
+nntest <- ctest
+
+#Normalizing the data to make them usable for the built-in R-functions and resetting them to data-frames
+mean <- apply(ctrain, 2, mean)
+mean[1] = 0
+std <- apply(ctrain, 2, sd)
+std[1] = 1
+nn_train <- scale(nntrain, center=mean, scale=std)
+nn_test <- scale(nntest, center=mean, scale=std)
+
+nn_train.df <- as.data.frame(nn_train)
+nn_test.df <- as.data.frame(nn_test)
+
+library(nnet)
+library(NeuralNetTools)
+
+#Cross validation to find best size of hidden layer
+set.seed(2)
+
+cv_nn = tune(nnet, diabetes ~ ., data=nn_train.df, ranges=list(size=1:15))
+
+nn_best_model=cv_nn$best.model
+nn_best_model
+nn_prob_test=predict(nn_best_model, newdata=nn_test.df) #jeg får ikke til , type="response"
+nn_pred_test=ifelse(nn_prob_test>0.5, 1, 0)
+conf_test_nn=table(nn_pred_test, ctest$diabetes)
+conf_test_nn
+misclas_test_nn=(length(ctest[, 1])-sum(diag(conf_test_nn)))/length(ctest[, 1])
+cat("Misclassification rate for the test data: ", misclas_test_nn)
+
+library(devtools)
+source_url('https://gist.githubusercontent.com/fawda123/7471137/raw/466c1474d0a505ff044412703516c34f1a4684a5/nnet_plot_update.r')
+plot.nnet(nn_best_model)
+
+
+```
+We see from the results that the size of the hidden layer is set to only one node and the misclassification rate is 19,8% for the fitted model. This means that a quite small model was enough to predict as well as earlier models. It is 
+
+```{r ROC neural nets}
+par(pty='s')
+roc_curve = roc(response=ctest[,1], predictor=nn_prob_test, legacy.axes=TRUE, plot=TRUE)
+```
+
 
 For each method you 
 
