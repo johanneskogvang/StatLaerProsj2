@@ -545,18 +545,14 @@ bagging_ROC
 ```
 The $AUC$ is $0.8288$. 
 
-
 * one method from Module 9: Support vector machines
 
 We choose the support vector machines method, with a radial kernel, the cost of violating the margin = 10, and $\gamma$ = 0.001. The radial kernel is chosen because it is efficient and helps avoid overfitting of the data. The radial kernel is defined as 
- 
 $$ K(\textbf{x}_i, \textbf{x}_i') = \text{exp}(- \gamma \sum_{j = 1}^{p}(x_{ij} - x_{i'j})^2)  $$ 
 where $\gamma$ is a tuning parameter and $p$ is the number of covariates. We find the optimal values for the margin violation cost and $\gamma$ by the function tune() in R. This results in a model where the width of the margin is 0.1, as seen from the summary of the selected model.  
  
 We notice that the model uses a quite large number of support vectors, 258 out of 300 possible. This could give us suspicions that the model is overfitted, but since the misclassification error is still rather low, it does not seem to be a substantial problem. ENDRE DETTE HVIS RESULTATET ENDRER SEG! 
  
-
-
 ```{r svm}
 flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
 ctrain=flying$ctrain
