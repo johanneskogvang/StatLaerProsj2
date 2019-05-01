@@ -462,7 +462,6 @@ lrtest=ctest
 library(glmnet)
 diab.glm = glm(diabetes ~ ., data = ctrain, family = "binomial")
 summary(diab.glm)
-
 ```
 
 If we look at the summary of the model, we see that there are three significate covariates woth p-value less than $0.05$. These are `glu`, `bmi` and `ped`, which in fact all have p-values less than $0.01$. The covariates `bp` and `skin` have rather high p-values, which means that they may not be that important in the model. 
@@ -477,8 +476,6 @@ conf_test=table(diab.glm_pred, lrtest$diabetes)
 conf_test
 misclass_test = (232-sum(diag(conf_test)))/232
 misclass_test
-
-#summary(diab.glm_prob)
 ```
 
 
@@ -529,15 +526,7 @@ The number of bootstrap samples, $B$, is chosen such that the error has stabilis
 varImpPlot(diab.bagging)
 
 ```
-In the variance importance plot we see that `glu` is the most important covariate both when it comes to 
-
-kan noen hjelpe meg å forstå variable importance plots?
-jeg tror at de som er lengst opp er viktigst, men jeg skjønner ikke så mye mer. 
-
-
-In the variance imporatance plots we see that $glu$ is the covariate that contributes the most to both increase in MSE and to increse in the node purity. Both $npreg$ and $bp$ contributes the least. HÆ? nå skjønner jeg ikke helt hva jeg har skrevet her?? 
-skrive mer utfyllende?
-
+In the variance importance plot we see that `glu` is the most important covariate both when it comes to increase in MSE when assigning random variables instead of the covariate and in increase of the Gini index when using thw covariate. One can also see that `npreg` and `bp` are the least important variables. 
 
 Evaluation of the model:
 
@@ -555,9 +544,6 @@ misclass_test_bagging
 
 ROC curve and AUC
 ```{r ROC bagging}
-#Det er noe her som ikkke fungerer når man knitter????
-
-
 library(pROC)
 par(pty='s')
 bagging_ROC=roc(ctest[ ,1], diab.bag_prob, plot=TRUE, legacy.axes=TRUE)
@@ -588,13 +574,46 @@ svm_pred_test=ifelse(svm_prob_test>0.5, 1, 0)
 conf_test_svm=table(svm_pred_test, ctest$diabetes)
 conf_test_svm
 misclas_test_svm=(232-sum(diag(conf_test_svm)))/232
-print("Misclassification rate for the test data: ")
-misclas_test_svm 
-
+cat("Misclassification rate for the test data:", misclas_test_svm)
 ```
 
 
 * one method from Module 11: Neural networks
+We now use a machine learning technique based on neural networks. Because the application is classification with only two classes we use a network with only one output node. The input layer consists of one node for each covariate which gives an input layer with a total of 7 nodes. We use a method in R called `nnet` which uses one hidden layer where the number of hidden nodes can be varied to fit our problem. To see what works best in our case we will use bootstrapping to find the best choice for this tuning parameter.  
+ 
+```{r neural networks} 
+#loading again because the data has to be unchanged 
+flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd") 
+ctrain=flying$ctrain 
+ctest=flying$ctest 
+ 
+nntest = scale(ctest)
+nntrain = scale(ctrain) 
+ 
+library(nnet) 
+library(NeuralNetTools) 
+library(pROC) 
+ 
+#Bootstrapping to find best model: 
+set.seed(2) 
+ 
+bs = tune(nnet, diabetes ~ ., data=nntrain, ranges=list(size=1:12)) 
+ 
+nn_best_model=bs$best.model 
+ 
+nn_prob_test=predict(nn_best_model, newdata=nntest) #jeg får ikke til , type="response" 
+nn_pred_test=ifelse(nn_prob_test>0.5, 1, 0) 
+conf_test_nn=table(nn_pred_test, ctest$diabetes) 
+conf_test_nn 
+misclas_test_nn=(length(ctest[, 1])-sum(diag(conf_test_nn)))/length(ctest[, 1]) 
+cat("Misclassification rate for the test data: ", misclas_test_nn) 
+ 
+roc_curve = roc(response=ctest[,1], predictor=nn_prob_test, legacy.axes=TRUE) 
+ 
+ggroc(roc_curve) + ggtitle("ROC curve for neural network model") 
+ 
+``` 
+
 
 For each method you 
 
