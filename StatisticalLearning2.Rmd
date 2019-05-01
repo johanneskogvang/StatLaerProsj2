@@ -379,9 +379,10 @@ legend("bottomleft",legend = colsvsnames[,2],cex=0.55,col=cols,pch = pch.vec)
 ```
 
 
-**Q25:**: A hierarchical clustering algorithm starts with dividing all elements into it's own cluster and iteratively merges the closest clusters to bigger clusters. It then has to be decided how one can say which clusters are nearer than other when the dimensions grow larger than two. The point's positions are defined by a vector of the values of the covariates and thus we can use a norm to express the distance between two points. The most common norm is the 2-norm (also called Eucledian distance) and for deciding the distance between two clusters there is also several choices. There are 3 common methods, where average linkage is calculating the mean position of each cluster and calculating the distance between these two points.
+**Q25:**: A hierarchical clustering algorithm starts with dividing all elements into its own cluster and iteratively merging the closest clusters to bigger clusters. It then has to be decided how one can say which clusters are closer than other when the dimensions grow larger than two. The positions of the points are defined by a vector of the values of the covariates, and thus we can use a norm to express the distance between two points. The most common norm is the 2-norm (also called Eucledian distance). For deciding the distance between two clusters there are also several choices. There are three common methods, where the average linkage is calculating the mean position of each cluster and calculating the distance between these two points.
 
-**Q26:**: Perform hierarchical clustering with Euclidean distance and average linkage on the scaled gene expression in `Z`. Observe where our samples labelled as K562, MCF7 and `UNKNOWN` are placed in the dendrogram. Which conclusions can you draw from this?
+**Q26:**: 
+
 ```{r q26}
 library(ggplot2)
 library(ggdendro)
@@ -389,8 +390,7 @@ library(ggdendro)
 ggdendrogram(hclust(dist(Z), method = "average"))+labs(title="Hierarchical clustering")
 
 ```
-From the Hierarchical clustering preformed above we can observe how the algorithm places the samples compared to the well known samples. We start by looking at the `K562`samples and see that they are clustered together with `LEUKEMIA` as expected. The Hierarchical clustering as, as we did in **Q24**, struggels with clustering the `BREAST` samples together, but in the same way we saw it classifies the `MCF7` samples closest to two `BREAST` samples. The `UNKNOWN` sample is by the algorithm nearest to `OVERIAN` samples and not `NSCLC` as we suspected. But we do get confirmed that `NSCLC` is somewhat randomely spread, so the basis of our suspicion is well grounded, we just did not belive that the sample was closer to the `OVERIAN` samples.
-
+From the Hierarchical clustering performed above we can observe how the algorithm places the samples compared to the well-known samples. We start by looking at the `K562` samples and see that they are clustered together with `LEUKEMIA` as expected. The Hierarchical clustering, as we did in **Q24**, struggles with clustering the `BREAST` samples together, but in the same way we saw it classifies the `MCF7` samples closest to two `BREAST` samples. The `UNKNOWN` sample is by the algorithm nearest to `OVERIAN` samples and not `NSCLC` as we suspected. But we do get confirmed that `NSCLC` is somewhat randomely spread, so the basis of our suspicion is well-grounded, we just did not belive that the sample was closer to the `OVERIAN` samples.
 
 **Q27:**: In the plot below it is preformed hierarchical clustering based on the principal components. This means that the point's positions are based on the values when the vector are multiplied with the principal components. This means that the clusterings are based on vectors of length 64 in stead of 6830. One entry of the heat map grid shows the value of a PCA multiplied with the gene composition vector of a sample. The horizontal axis is the PCAs sorted by the amount of variation explained in the data from most to less. On the vertical axis is the covariates sorted by the hierchial clustering algorithm.
 
