@@ -25,6 +25,7 @@ install.packages("tree") #tree
 install.packages("randomForest") #for random forest
 install.packages("ElemStatLearn") #dataset in Problem 2
 install.packages("ggdendro")
+install.packages("NeuralNetTools")
 BiocManager::install(c("pheatmap")) #heatmap in Problem 2
 ```
 
@@ -118,20 +119,16 @@ In local regression we have $\hat{f}=\beta_0+\beta_1 x_i+\beta_2x_i^2$, while fo
 **Q4:** Describe how you can perform model selection in regression with AIC as criterion.  
 When we perform model selection in regression with AIC as the criterion, we perform a best subset selcetion, and choose the set of covariates that produce the lowest AIC value. 
 The full procedure when one has a model depending on $k$ covariates is as follows:
-1) For every value $i$ from 1 to $k$, all $k \choose j$ models that contain $j$ covariates are fitted. 
+1) For every value $i$ from $1$ to $k$, all $k \choose j$ models that contain $j$ covariates are fitted. 
 2) The model $M_j$ with the lowest SSE value is selected. 
 3) From all $M_j$, $j  = 0, ... , k$, where $M_0$ is the model with only the intercept, the model with the lowest AIC is selected. The AIC is defined as
 
 $$\text{AIC} = \frac{\text{SSE}/n}{\hat{\sigma^2}} + 2\frac{p}{n}$$
 where $n$ is the number of observations and $p$ is the number of selected covariates in the given model. 
 
-**Q5:** What are the main differences between using AIC for model selection and using cross-validation (with mean squared test error MSE)?
+**Q5:** The main difference between cross-validation and AIC is that cross-validation is in general more computationally expensive than model selection with AIC, however, this is rearly considered a problem with today's computers. Cross-validation also measures the test error directly, instead of adjusting the training error for model size, as the AIC does. Finally, cross-validation makes fewer assumptions about the underlying model. Cross-validation does not directly punish models with many covariates; if two models with different complexity produces the same test error, cross-validation will do nothing to choose the less complex model. 
 
-Cross-validation is in general more computationally expensive than model selection with AIC, however, this is rearly considered a problem with today's computers. Cross-validation also measures the test error directly, instead of adjusting the training error for model size, as the AIC does. Finally, cross-validation makes fewer assumptions about the underlying model. Cross-validation does not directly punish models with many covariates; if two models with different complexity produces the same test error, cross-validation will do nothing to choose the less complex model. 
-
-**Q6:** See the code below for performing model selection with `bestglm()` based on AIC. What kind of contrast is used to represent `cut`, `color` and `clarity`? Write down the final best model and explain what you can interpret from the model.    
-
-To represent `cut`, the `fair cut` is removed and used as a reference. This means that all the other covariates linked to how good a cut is has $\beta$ values that represents the relative change from the price that would have been predicted for a `fair cut`. The same holds for the $\beta$ values linked to `color` and `clairity`, where `colorD` and `clarityI1` are used as reference values. 
+**Q6:** To represent `cut`, the `fair cut` is removed and used as a reference. This means that all the other covariates linked to how good a cut is has $\beta$ values that represents the relative change from the price that would have been predicted for a `fair cut`. The same holds for the $\beta$ values linked to `color` and `clairity`, where `colorD` and `clarityI1` are used as reference values. 
 
 Looking at the summary of the `best subset model`, one can see that the best model is 
 $$ \text{logprice} =\beta_{\text{intercept}} + \beta_{\text{logcarat}} \cdot x_{\text{logcarat}} + \beta_{\text{cutGood}}\cdot x_{\text{cutGood}} + \beta_{\text{cutVeryGood}}\cdot x_{\text{cutVeryGood}} +\beta_{\text{cutPremium}}\cdot x_{\text{cutPremium}} + \beta_{\text{cutIdeal}}\cdot x_{\text{cutIdeal}} \\ 
@@ -165,9 +162,8 @@ mse_bsm = mean((dtest$logprice - pred_bsm)^2)
 cat("Using the best model, the MSE is calculated to be", mse_bsm)
 ```
 
-**Q8:** Build a model matrix for the covariates `~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1`. What is the dimension of this matrix?  
+**Q8:** We build a model matrix for the covariates `~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1`.
 ```{r}
-#using the -1 to prevent lasso from removing the indercept.
 x_train = model.matrix(logprice~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1, data=dtrain)
 cat("The dimension of the model matrix using logcarat, cut, clarity, color, depth, table, xx, yy and zz is: (",dim(x_train)[1], "x", dim(x_train)[2],").")
 
@@ -192,7 +188,7 @@ coef(fit_lasso)
 ```
 The value for the regularization parameter, $\lambda$, was found using cross validation.
 
-**Q10:** Calculate and report the MSE of the test set (on the scale of `logprice`).  
+**Q10:** 
 ```{r}
 x_test = model.matrix(~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1, data=dtest)
 y_test = dtest$logprice
@@ -398,7 +394,7 @@ ctrain=flying$ctrain
 ctest=flying$ctest
 ```
 
-**Q28:** Start by getting to know the _training data_, by producing summaries and plots. Write a few sentences about what you observe and include your top 3 informative plots and/or outputs.
+**Q28:** We start by getting to know the _training data_, by producing summaries and plots. Write a few sentences about what you observe and include your top 3 informative plots and/or outputs.
 ```{r}
 
 flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
@@ -408,13 +404,14 @@ ctest=flying$ctest
 library(GGally)
 summary(ctrain) #gir info om vanlige verdier for kovariatene
 str(ctrain) #en kompkt måte å se hvordan datasettet ser ut 
-head(ctrain) #viser den første delen av dataframen 
 ctrain$diabetes = as.factor(ctrain$diabetes)
 ggpairs(ctrain, aes(color=diabetes))
 ```
-
-
-Include pair plot to investigate for collinearity. 
+Firstly, to get an impression of how the values of the covariates are, we print the summary of the data frame. This can be useful for instance if we wanted to perform regression on the data set later, because it would make it easier to interpret the regression coefficients. The summary for instance tells us that the data set only includes persons of the age from 21 to 70, and that the median value of `ped` is 0.4, which people outside the medical profession probably do no know beforehand. This knowledge can for instance help preventing interpreting larger regression coefficient values for `ped` as that coefficiant being more significant, as it might just be an adjustment for the `ped` values being lower in general.  
+ 
+Secondly, we have included a pair plot to investigate how the different covariates influences the response variable, and also how they relate to each other. In an ideal model, all of the covariates are independent, to avoid multicollinearity, and so one should check whether this is in fact true for our model. We see from the correlation plots that most of the covariates have low correlation, with the exeption of `skin` and `bmi`, and `npreg` and `age`.  
+The plots on the diagonal show the frequency of the different covariate values for people with and without diabetes. Looking at these plots give a good indication of whether the specific covariate influence whether or not a person has diabetes. If the diabetes and non-diabetes sections does not overlap, this indicates that the covariate has an effect on the response. From our plot, we can then say that we expect that `npreg`, `glu`, `ped` and `age` are the covariates that influence whether a person has diabetes the most.  
+ 
 
 **Q29:** Use different methods to analyse the data. In particular use 
 
