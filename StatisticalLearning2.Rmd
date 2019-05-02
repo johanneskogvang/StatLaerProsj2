@@ -47,7 +47,8 @@ dtrain=all$dtrain
 dtest=all$dtest
 ```
 
-**Q1**: Would you choose `price` or `logprice` as response variable? Justify your choice. Next, plot your choice of response pairwise with `carat`, `logcarat`, `color`, `clarity` and `cut`. Comment.
+**Q1**: When getting to know the data we have to know if the response variable should be transformed to be as meaningful as possible. We produce some plots to get to know the behaviour of the response variable.
+
 ```{r plott}
 hist(dtrain$price)
 hist(dtrain$logprice)
@@ -57,7 +58,7 @@ rresprice = rstudent(fit_price)
 ```
 
 Looking at the histograms of price frequency for the `price` and `logprice` response variable, we see that while the `price` variable have much higher frequenies at lower values, the `logprice` variable is more evenly and symertically distributed for different values. We then want to use `logprice` as our response variable to more easily observe nuances in the data set. 
-We can observe the same by looking at Boxcox and residual plots for `price`and `logprice`. 
+We can observe the same by looking at Boxcox and residual plots for `price`and `logprice`, as seen below.  
 
 ```{r plott2}
 library(ggplot2)
@@ -97,24 +98,23 @@ plot(dtrain$clarity, dtrain$logprice, main = 'Clarity vs logprice')
 plot(dtrain$cut, dtrain$logprice, main = 'Cut vs logprice')
 ```
 
-From both the plot with `carat` and `logcarat` we observe a clear indication that higher carat leads to a higher price, which is expected. The relation between `logcarat` and `logprice` seems to be linear, which indicates that the price grows linearly with the carat. 
+From both the plot with `carat` and `logcarat` we observe a clear indication that higher carat leads to a higher price, which is expected. The relation between `logcarat` and `logprice` seems to be linear. 
 
-The relation between `logprice`and `clarity` is less apparent. Looking at the medians and the mid 50 percentiles, is seems as though the price decreses with better clarity, which is counterintuitive. We do however, observe that many outliers in the most extreme observations, and that the whiskers for most of the clarities cover mostly the entire price range. This indicates that the clarity has little influence on the diamond price. 
+The relation between `logprice`and `clarity` is less apparent. Looking at the medians and the mid 50 percentiles, is seems as though the price decreases with better clarity, which is counterintuitive. We do however observe many outliers in the most extreme observations, and that the whiskers for most of the clarities cover mostly the entire price range. This indicates that the clarity has little influence on the diamond price. 
 
 Some of the same is observable in the plot between `cut` and `logprice`, where the whiskers of the boxplots covers most of the price range for all cuts. 
 
 We now use the local regression model $\texttt{logprice} = \beta_0 + \beta_1 \texttt{carat}+ \beta_2 \texttt{carat}^2$ weighted by the tricube kernel $K_{i0}$. 
 
-**Q2:** What is the predicted price of a diamond weighting 1 carat. Use the closest 20% of the observations.  
+**Q2:**   
 ```{r message=FALSE, warning=FALSE}
-#fit = loess(dtrain$logprice ~ dtrain$carat, span=.2)
 fit = loess(logprice ~ carat, data=dtrain, span=.2 )
-10^predict(fit, 1)
+cat("The price of a diamond weighing 1 carat is",10^predict(fit, 1),", when we use the closest 20%")
 
 ```
 
 **Q3:** 
-In local regression we have $\hat{f}=\beta_0+\beta_1 x_i+\beta_2x_i^2$, while for KNN-regression this $\hat{f}$ is konstant equal to the mean of the observations in the neighbourhood. Hence, for local regression to be equal to KNN-regression we have $\beta_1 = \beta_2 = 0$. Also, we want $K_{i0}$ equal to one for the observations in the neighbourhood, and zero for the ones outside. 
+In local regression we have $\hat{f}=\beta_0+\beta_1 x_i+\beta_2x_i^2$, while for KNN-regression this $\hat{f}$ is constant equal to the mean of the observations in the neighbourhood. Hence, for local regression to be equal to KNN-regression we have $\beta_1 = \beta_2 = 0$. Also, we want $K_{i0}$ equal to one for the observations in the neighbourhood, and zero for the ones outside. 
 
 **Q4:** Describe how you can perform model selection in regression with AIC as criterion.  
 When we perform model selection in regression with AIC as the criterion, we perform a best subset selcetion, and choose the set of covariates that produce the lowest AIC value. 
