@@ -100,9 +100,9 @@ From both the plot with `carat` and `logcarat` we observe a clear indication tha
 
 The relation between `logprice`and `clarity` is less apparent. Looking at the medians and the mid 50 percentiles, is seems as though the price decreses with better clarity, which is counterintuitive. We do however, observe that many outliers in the most extreme observations, and that the whiskers for most of the clarities cover mostly the entire price range. This indicates that the clarity has little influence on the diamond price. 
 
-Some of the same is observable in the plot between `cut` and `logprice`, where the whiskersof the boxplots covers most of the price range for all cuts. 
+Some of the same is observable in the plot between `cut` and `logprice`, where the whiskers of the boxplots covers most of the price range for all cuts. 
 
-Use the local regression model $\texttt{logprice} = \beta_0 + \beta_1 \texttt{carat}+ \beta_2 \texttt{carat}^2$ weighted by the tricube kernel $K_{i0}$. 
+We now use the local regression model $\texttt{logprice} = \beta_0 + \beta_1 \texttt{carat}+ \beta_2 \texttt{carat}^2$ weighted by the tricube kernel $K_{i0}$. 
 
 **Q2:** 
 ```{r message=FALSE, warning=FALSE}
@@ -532,24 +532,19 @@ svmtrain=ctrain
 svmtest=ctest
 library(e1071)
 set.seed(2)
-CV_radial = tune(svm, diabetes ~ ., data=ctrain, kernel="radial", ranges=list(gamma=c(10^-5, 10^-4,0.001,0.01,0.1,1,2,3,4,5), cost=c(0.001, 0.01, 0.1, 1, 5, 10, 20,40,80,100,120,140,160)))
+CV_radial = tune(svm, factor(diabetes) ~ ., data=ctrain, kernel="radial", ranges=list(gamma=c(10^-5, 10^-4,0.001,0.01,0.1,1,2,3,4,5), cost=c(0.001, 0.01, 0.1, 1, 5, 10, 20,40,80,100,120,140,160)))
 #summary(CV_radial)
 #best: gamma=0.001, cost=5
 svm_best_model=CV_radial$best.model
 summary(svm_best_model)
 
 #Finding miclassification rate for the test set:
-svm_prob_test=predict(svm_best_model, newdata=svmtest, type="response")
-summary(svm_prob_test)
-svm_pred_test=ifelse(svm_prob_test>0.5, 1, 0)
+svm_pred_test=predict(svm_best_model, newdata=svmtest)
+summary(svm_pred_test)
 conf_test_svm=table(svm_pred_test, ctest$diabetes)
 conf_test_svm
 misclas_test_svm=(232-sum(diag(conf_test_svm)))/232
 cat("Misclassification rate for the test data:", misclas_test_svm)
-
-par(pty='s')
-svm_ROC=roc(ctest[ ,1], svm_prob_test, plot=TRUE, legacy.axes=TRUE)
-svm_ROC
 ```
 
 
