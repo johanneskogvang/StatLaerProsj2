@@ -25,6 +25,7 @@ install.packages("tree") #tree
 install.packages("randomForest") #for random forest
 install.packages("ElemStatLearn") #dataset in Problem 2
 install.packages("ggdendro")
+install.packages("NeuralNetTools")
 BiocManager::install(c("pheatmap")) #heatmap in Problem 2
 ```
 
@@ -56,7 +57,7 @@ rresprice = rstudent(fit_price)
 ```
 
 Looking at the histograms of price frequency for the `price` and `logprice` response variable, we see that while the `price` variable have much higher frequenies at lower values, the `logprice` variable is more evenly and symertically distributed for different values. We then want to use `logprice` as our response variable to more easily observe nuances in the data set. 
-We can observe the same by looking at Boxcox and residual plots for `price`and `logprice`. 
+We can observe the same by looking at Boxcox and residual plots for `price`and `logprice`, as seen below.  
 
 ```{r plott2}
 library(ggplot2)
@@ -98,7 +99,7 @@ plot(dtrain$cut, dtrain$logprice, main = 'Cut vs logprice')
 
 From both the plot with `carat` and `logcarat` we observe a clear indication that higher carat leads to a higher price, which is expected. The relation between `logcarat` and `logprice` seems to be linear. 
 
-The relation between `logprice`and `clarity` is less apparent. Looking at the medians and the mid 50 percentiles, is seems as though the price decreses with better clarity, which is counterintuitive. We do however, observe that many outliers in the most extreme observations, and that the whiskers for most of the clarities cover mostly the entire price range. This indicates that the clarity has little influence on the diamond price. 
+The relation between `logprice`and `clarity` is less apparent. Looking at the medians and the mid 50 percentiles, is seems as though the price decreases with better clarity, which is counterintuitive. We do however observe many outliers in the most extreme observations, and that the whiskers for most of the clarities cover mostly the entire price range. This indicates that the clarity has little influence on the diamond price. 
 
 Some of the same is observable in the plot between `cut` and `logprice`, where the whiskersof the boxplots covers most of the price range for all cuts. 
 
@@ -112,24 +113,21 @@ cat("The price of a diamond weighing 1 carat is",10^predict(fit, 1),", when we u
 ```
 
 **Q3:** 
-In local regression we have $\hat{f}=\beta_0+\beta_1 x_i+\beta_2x_i^2$, while for KNN-regression this $\hat{f}$ is konstant equal to the mean of the observations in the neighbourhood. Hence, for local regression to be equal to KNN-regression we have $\beta_1 = \beta_2 = 0$. Also, we want $K_{i0}$ equal to one for the observations in the neighbourhood, and zero for the ones outside. 
+In local regression we have $\hat{f}=\beta_0+\beta_1 x_i+\beta_2x_i^2$, while for KNN-regression this $\hat{f}$ is constant equal to the mean of the observations in the neighbourhood. Hence, for local regression to be equal to KNN-regression we have $\beta_1 = \beta_2 = 0$. Also, we want $K_{i0}$ equal to one for the observations in the neighbourhood, and zero for the ones outside. 
 
 **Q4:**   
 When we perform model selection in regression with AIC as the criterion, we perform a best subset selcetion, and choose the set of covariates that produce the lowest AIC value. 
 The full procedure when one has a model depending on $k$ covariates is as follows:
-1) For every value $i$ from 1 to $k$, all $k \choose j$ models that contain $j$ covariates are fitted. 
+1) For every value $i$ from $1$ to $k$, all $k \choose j$ models that contain $j$ covariates are fitted. 
 2) The model $M_j$ with the lowest SSE value is selected. 
 3) From all $M_j$, $j  = 0, ... , k$, where $M_0$ is the model with only the intercept, the model with the lowest AIC is selected. The AIC is defined as
 
 $$\text{AIC} = \frac{\text{SSE}/n}{\hat{\sigma^2}} + 2\frac{p}{n}$$
 where $n$ is the number of observations and $p$ is the number of selected covariates in the given model. 
 
-**Q5:** 
-We now look at the main differences between using AIC and using Cross-validation for model selection. Cross-validation is in general more computationally expensive than model selection with AIC, however, this is rearly considered a problem with today's computers. Cross-validation also measures the test error directly, instead of adjusting the training error for model size, as the AIC does. Finally, cross-validation makes fewer assumptions about the underlying model. Cross-validation does not, unlike AIC, directly punish models with many covariates. If two models with different complexity produces the same test error, cross-validation will do nothing to choose the less complex model. 
+**Q5:** The main difference between cross-validation and AIC is that cross-validation is in general more computationally expensive than model selection with AIC, however, this is rearly considered a problem with today's computers. Cross-validation also measures the test error directly, instead of adjusting the training error for model size, as the AIC does. Finally, cross-validation makes fewer assumptions about the underlying model. Cross-validation does not directly punish models with many covariates; if two models with different complexity produces the same test error, cross-validation will do nothing to choose the less complex model. 
 
-**Q6:** See the code below for performing model selection with `bestglm()` based on AIC. What kind of contrast is used to represent `cut`, `color` and `clarity`? Write down the final best model and explain what you can interpret from the model.    
-
-To represent `cut`, the `fair cut` is removed and used as a reference. This means that all the other covariates linked to how good a cut is has $\beta$ values that represents the relative change from the price that would have been predicted for a `fair cut`. The same holds for the $\beta$ values linked to `color` and `clairity`, where `colorD` and `clarityI1` are used as reference values. 
+**Q6:** To represent `cut`, the `fair cut` is removed and used as a reference. This means that all the other covariates linked to how good a cut is has $\beta$ values that represents the relative change from the price that would have been predicted for a `fair cut`. The same holds for the $\beta$ values linked to `color` and `clairity`, where `colorD` and `clarityI1` are used as reference values. 
 
 Looking at the summary of the `best subset model`, one can see that the best model is 
 $$ \text{logprice} =\beta_{\text{intercept}} + \beta_{\text{logcarat}} \cdot x_{\text{logcarat}} + \beta_{\text{cutGood}}\cdot x_{\text{cutGood}} + \beta_{\text{cutVeryGood}}\cdot x_{\text{cutVeryGood}} +\beta_{\text{cutPremium}}\cdot x_{\text{cutPremium}} + \beta_{\text{cutIdeal}}\cdot x_{\text{cutIdeal}} \\ 
@@ -163,9 +161,8 @@ mse_bsm = mean((dtest$logprice - pred_bsm)^2)
 cat("Using the best model, the MSE is calculated to be", mse_bsm)
 ```
 
-**Q8:** Build a model matrix for the covariates `~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1`. What is the dimension of this matrix?  
+**Q8:** We build a model matrix for the covariates `~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1`.
 ```{r}
-#using the -1 to prevent lasso from removing the indercept.
 x_train = model.matrix(logprice~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1, data=dtrain)
 cat("The dimension of the model matrix using logcarat, cut, clarity, color, depth, table, xx, yy and zz is: (",dim(x_train)[1], "x", dim(x_train)[2],").")
 
@@ -190,7 +187,7 @@ coef(fit_lasso)
 ```
 The value for the regularization parameter, $\lambda$, was found using cross validation.
 
-**Q10:** Calculate and report the MSE of the test set (on the scale of `logprice`).  
+**Q10:** 
 ```{r}
 x_test = model.matrix(~logcarat+cut+clarity+color+depth+table+xx+yy+zz-1, data=dtest)
 y_test = dtest$logprice
@@ -209,7 +206,9 @@ When constructing a regression tree one uses the top-down implementation with th
 
 **Q12:** A regression tree will be a suitable method for both numerical and categorical covariates; it is when the response is categorical one should use a classification three instead. A regression tree can be used in most cases where normal linear regression can also be used, and it has the benefits that it is easier to interpret and that it can be simplified using bagging and boosting, etc. It can also be added that when constructing a regression tree with numerical covariates, one should choose the splits according to what produces the lowest MSE. 
 
-**Q13:** Below, we have fitted a regression tree to the diamond data with `logprice` as the response. From the drawing below, we see that it only sorts on the lenght and width of the diamond, which should indicate that these are the most important covariates when classifying the price of the diamond. However, the best subset selection method for instance indicates that many more of the parameters is more or equally significant to the lenght and that the width is in fact statistically insignificant. This means that we can expect some errors when prediciting with this model. 
+A regression tree will be a suitable method for both numerical and categorical covariates; it is when the response is categorical one should use a classification three instead. A regression tree can be used in most cses where normal linear regression can also be used, and it has the benefits that it is easier to interpret and that it can be simplified using bagging and boosting, etc. It can also be added that when constructing a regression tree with numerical covariates, one should choose the splits according to what produces the lowest MSE. 
+
+**Q13:** We have fitted a regression tree to the diamond data with `logprice` as the response below. From the drawing of the regression tree, we see that it only sorts on the lenght and width of the diamond, which should indicate that these are the most important covariates when classifying the price of the diamond. However, the best subset selection method for instance indicates that many more of the parameters is more or equally significant to the lenght and that the width is in fact statistically insignificant. This means that we can expect some errors when prediciting with this model. 
 
 ```{r}
 library(tree)
@@ -224,7 +223,9 @@ text(tree.logprice, pretty=1)
 tree_pred = predict(tree.logprice, newdata=dtest)
 mse_tree=mean((tree_pred - dtest$logprice)^2)
 cat("The MSE of the regression tree is", mse_tree)
+
 ```
+
 
 
 **Q15:**  When we average over different observations, the variance is typically lower than for one single observation. One can use the bootstrap to find $B$ repeated samples from the training data set, train each of the $B$ sets, and then average on the trained models. This is called bootstrap aggregation, or bagging, and will reduce the variance of the model. 
@@ -321,11 +322,10 @@ plot(1:dim(X)[2],pca$rotation[,1],type="l",xlab="genes",ylab="weight",main="Firs
 
 **Q22:**  The plot "First eigenvector" shows the weights of the first eigenvector of $\hat{\bf{R}}$ which is also the first principal component. The reason why there is only $64$ principal component is that there can not be more principal components than the rank of $\bf{Z}$. This is because all the principal components are linearly independent, and thus the number of principal components (which is the eigenvectors of $\hat{\bf{R}}$) is bounded by the rank of $\bf{Z}$ which is $min(n, p) = n$. Because we have done a centering we do not have full rank anymore because the centering has to lead to one of the rows being linearly dependent on the others. The rank of $\bf{Z}$ is then $n-1=63$ and it should thus have been $63$ principal components. When we study the last principal component we see that it is almost zero and the reason why it is not equal to zero is because of rounding error in the first $63$ principal components. The principal component scores corresponds to the principal components. 
   
-**Q21**, the score is directly related to a given principal component, so the number of component scores is always the same as the number of principle components.
 
 **Q23:** The proportion of variance explained by a single principle component is calculated as 
 $$\text{PVE}=\frac{\text{variance explained by }m\text{th component}}{\text{total variance}} = \frac{\frac{1}{n}\sum_{i=1}^{n}(\sum_{j = 1}^{p} \phi_{jm}z_{ij})^2}{\frac{1}{n}\sum_{j=1}^{p}\sum_{i=1}^{n}z_{ij}}.$$
-From this formula it is also easy to see that the total variance `sum(pca$sdev^2=p)`. The total variance defined above is the same as the sum of the variances of the columns of $\bf{Z}$ which is $p$ because they are standardized and thus every column has variance $1^2=1$. An easier way of computing the proportion of variance is to use the eigenvalues corresponding to the principle components. It can be shown that $\text{Var}(\phi_j) = \lambda_j$ and thus $$\text{PVE}=\frac{\lambda_m}{\sum_{j=1}^{p}\lambda_j}$$
+From this formula it is also easy to see that the total variance is `sum(pca$sdev^2)=p`. The total variance defined above is the same as the sum of the variances of the columns of $\bf{Z}$, which is $p$ since they are standardized, and thus every column has variance $1^2=1$. An easier way of computing the proportion of variance is to use the eigenvalues corresponding to the principle components. It can be shown that $\text{Var}(\phi_j) = \lambda_j$ and thus $$\text{PVE}=\frac{\lambda_m}{\sum_{j=1}^{p}\lambda_j}$$
 
 ```{r proportion of variance plot}
 pve=100*pca$sdev^2/sum(pca$sdev^2)
@@ -343,10 +343,10 @@ pve31 = sum(pca$sdev[1:31]^2)/totvar
 cat("The first 31 principal components explains", pve31 * 100, "% of the variance and 32 principal components explains", pve32 * 100, "% of the variance. Thus we need 32 principal components to explain 80% of the variance in the data.")
 ```
 
-**Q24**: From the plot above, plotting PC1 agianst PC2, the most obvious clustering is the blue clustering, where the genes are from `MELANOMA` cancer tumors. The green `LEUKEMIA` genes are also easy to seperate from the others, and so are genes from `COLON` cancer tumors. We observe that the genes from other cancer types are mostly located in the left upmost corner and are also, to some degree, clustered. The exeption is the genes from the breast cancer tumor, which are not clustered together at all and is spread around the whole plot. 
-  It is known that the `K562` samples are leukemia cells and we can see from the plot that they are clustered together with the other leukemia samples. The breast cancer samples `MCF7` is harder to say something about because the other breast cancer samples are also spread widely around. The unknown sample is laying in the upper left corner, so it could belong to any of those group really. The most likely cancer type is although `NSCLC` or `OVARIAN` because the closest points are of those types.
+**Q24**: From the plot above, plotting PC1 agianst PC2, the most obvious clustering is the blue clustering, where the genes are from `MELANOMA` cancer tumors. The green `LEUKEMIA` genes are also easy to seperate from the others, and so are genes from `COLON` cancer tumors. We observe that the genes from other cancer types are mostly located in the left upmost corner and are also, to some degree, clustered. The exeption is the genes from the breast cancer tumor, which are not clustered at all and are spread around the entire plot. 
+  It is known that the `K562` samples are leukemia cells and we can see from the plot that they are clustered together with the other leukemia samples. It is harder to say something about the breast cancer samples, `MCF7`, because the other breast cancer samples are also spread widely around. The unknown sample lays in the upper left corner, so it could belong to any of those groups. However, the most likely cancer types are `NSCLC` or `OVARIAN` because the closest points are of those types.
 
-We plot a couple of other projections of the data onto the principal components to see if we find other interesting relationships. It is mostly interesting to look at the fist principal comonents, because it is in those that contains the most variance. It could have been interesting to find plots where the breast cancer cells are clustered together or find a relation for the unknown sample, but this turned out to be very hard to do. Below two other pairs of principal components are plotted together. In the first plot we see PC1 agianst PC3 and here we also see that green and yellow are clustered, and again the remaining cancer types are slightly clustered and also here it is hard to find a relation between the cases of breast cancer. Although we see here that the `MFC7` samples of breast cancer is a bit more separated from the cluster of `COLON` cases and is still closely associated with a breast cancer case. This is shown even more clearly by plotting PC3 against PC4 as shown below. The `UNKNOWN` sample was hard to classify no matter what combination we tried, and because of this we conclude that it is most probable that it belongs to one of the cancer types that is hard to separate from the others. Our strongest hypothesis is that it belongs to the `NSCLC` type.
+We plot a couple of other projections of the data onto the principal components to see if we can find other interesting relationships. It is mostly interesting to look at the first principal comonents, because those contain the most variance. It could have been interesting to find plots where the breast cancer cells are clustered together or find a relation for the unknown sample, but this turned out to be difficult. Below two other pairs of principal components are plotted together. In the first plot we see PC1 agianst PC3 and here we also see that green and yellow are clustered. Again, the remaining cancer types are slightly clustered and it is hard to find a relation between the cases of breast cancer. However we see that the `MFC7` samples of breast cancer are slightly more separated from the cluster of `COLON` cases and are still closely associated with a breast cancer case. This is shown even more clearly by plotting PC3 against PC4, as shown below. The `UNKNOWN` sample was hard to classify for all combinations we tried, and because of this we conclude that it probably belongs to one of the cancer types that are difficult to separate from the others. Our strongest hypothesis is that it belongs to the `NSCLC` type.
 
 
 
@@ -372,10 +372,9 @@ library(ggdendro)
 ggdendrogram(hclust(dist(Z), method = "average"))+labs(title="Hierarchical clustering")
 
 ```
-From the Hierarchical clustering preformed above we can observe how the algorithm places the samples compared to the well known samples. We start by looking at the `K562`samples and see that they are clustered together with `LEUKEMIA` as expected. The Hierarchical clustering as, as we did in **Q24**, struggels with clustering the `BREAST` samples together, but in the same way we saw it classifies the `MCF7` samples closest to two `BREAST` samples. The `UNKNOWN` sample is by the algorithm nearest to `OVERIAN` samples and not `NSCLC` as we suspected. But we do get confirmed that `NSCLC` is somewhat randomely spread, so the basis of our suspicion is well grounded, we just did not belive that the sample was closer to the `OVERIAN` samples.
+From the Hierarchical clustering performed above we can observe how the algorithm places the samples compared to the well-known samples. We start by looking at the `K562` samples and see that they are clustered together with `LEUKEMIA` as expected. The Hierarchical clustering, as we did in **Q24**, struggles with clustering the `BREAST` samples together, but in the same way we saw it classifies the `MCF7` samples closest to two `BREAST` samples. The `UNKNOWN` sample is by the algorithm nearest to `OVERIAN` samples and not `NSCLC` as we suspected. But we do get confirmed that `NSCLC` is somewhat randomly spread, so the basis of our suspicion is well-grounded, we just did not belive that the sample was closer to the `OVERIAN` samples.
 
-
-**Q27:**: In the plot below it is preformed hierarchical clustering based on the principal components. This means that the point's positions are based on the values when the vector are multiplied with the principal components. This means that the clusterings are based on vectors of length 64 in stead of 6830. One entry of the heat map grid shows the value of a PCA multiplied with the gene composition vector of a sample. The horizontal axis is the PCAs sorted by the amount of variation explained in the data from most to less. On the vertical axis is the covariates sorted by the hierchial clustering algorithm.
+**Q27:**: In the plot below it is preformed hierarchical clustering based on the principal components. This means that the positions of the points are based on the values when the vector are multiplied with the principal components. This means that the clusterings are based on vectors of length 64 in stead of 6830. One entry of the heat map grid shows the value of a PCA multiplied with the gene composition vector of a sample. The horizontal axis is the PCAs sorted by the amount of variation explained in the data, from most to less. On the vertical axis the covariates are sorted by the hierchial clustering algorithm.
 
 ```{r}
 library(pheatmap)
@@ -394,7 +393,7 @@ ctrain=flying$ctrain
 ctest=flying$ctest
 ```
 
-**Q28:** Start by getting to know the _training data_, by producing summaries and plots. Write a few sentences about what you observe and include your top 3 informative plots and/or outputs.
+**Q28:** We start by getting to know the _training data_, by producing summaries and plots. Write a few sentences about what you observe and include your top 3 informative plots and/or outputs.
 ```{r}
 
 flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
@@ -404,13 +403,14 @@ ctest=flying$ctest
 library(GGally)
 summary(ctrain) #gir info om vanlige verdier for kovariatene
 str(ctrain) #en kompkt måte å se hvordan datasettet ser ut 
-head(ctrain) #viser den første delen av dataframen 
 ctrain$diabetes = as.factor(ctrain$diabetes)
 ggpairs(ctrain, aes(color=diabetes))
 ```
-
-
-Include pair plot to investigate for collinearity. 
+Firstly, to get an impression of how the values of the covariates are, we print the summary of the data frame. This can be useful for instance if we wanted to perform regression on the data set later, because it would make it easier to interpret the regression coefficients. The summary for instance tells us that the data set only includes persons of the age from 21 to 70, and that the median value of `ped` is 0.4, which people outside the medical profession probably do no know beforehand. This knowledge can for instance help preventing interpreting larger regression coefficient values for `ped` as that coefficiant being more significant, as it might just be an adjustment for the `ped` values being lower in general.  
+ 
+Secondly, we have included a pair plot to investigate how the different covariates influences the response variable, and also how they relate to each other. In an ideal model, all of the covariates are independent, to avoid multicollinearity, and so one should check whether this is in fact true for our model. We see from the correlation plots that most of the covariates have low correlation, with the exeption of `skin` and `bmi`, and `npreg` and `age`.  
+The plots on the diagonal show the frequency of the different covariate values for people with and without diabetes. Looking at these plots give a good indication of whether the specific covariate influence whether or not a person has diabetes. If the diabetes and non-diabetes sections does not overlap, this indicates that the covariate has an effect on the response. From our plot, we can then say that we expect that `npreg`, `glu`, `ped` and `age` are the covariates that influence whether a person has diabetes the most.  
+ 
 
 **Q29:** Use different methods to analyse the data. In particular use 
 
@@ -421,7 +421,7 @@ $$ p(x_i)= p_i = \frac{e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\b
 One can also write this as 
 $$ log \frac{p_i}{1-p_i} = {{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}.$$
 
-These coefficients are found using maximun likelihood estimation. In logistic regression we assume that the observations to be independent of each other, and the variables should not be to highly correlated with each other. As seen when plotting the variables with each other, one can observe some mutlicollinearity between `skin` and `bmi` as well as between `npreg` and `age`. The log-odds is the left side of the last equation. We require little or no linearity between the log-odds and the independent variables, and we also assume that we have a large sample size.    
+These coefficients are found using maximun likelihood estimation. In logistic regression we assume that the observations are independent of each other, and the variables should not either be to highly correlated. As seen when plotting the variables with each other, one can observe some mutlicollinearity between `skin` and `bmi` as well as between `npreg` and `age`. The log-odds is the left side of the last equation. We require little or no linearity between the log-odds and the independent variables, and we also assume that we have a large sample size.    
 
 Fitting the model:
 ```{r logistic regression}
@@ -432,11 +432,10 @@ diab.glm = glm(diabetes ~ ., data = ctrain, family = "binomial")
 summary(diab.glm)
 ```
 
-If we look at the summary of the model, we see that there are three significate covariates woth p-value less than $0.05$. These are `glu`, `bmi` and `ped`, which in fact all have p-values less than $0.01$. The covariates `bp` and `skin` have rather high p-values, which means that they may not be that important in the model. 
+If we look at the summary of the model, we see that there are three significate covariates with p-value less than $0.05$. These are `glu`, `bmi` and `ped`, which in fact all have p-values less than $0.01$. The covariates `bp` and `skin` have rather high p-values, which means that they may not be that important in the model. 
 
 
-
-Evaluation of the model:
+If one appiles this model to the test data one can find the proporsion of mistakes that are made, called the misclassification test error rate.
 ```{r log reg eval}
 diab.glm_prob=predict(diab.glm, newdata=lrtest, type="response")
 diab.glm_pred=ifelse(diab.glm_prob > 0.5, 1, 0)
@@ -444,11 +443,9 @@ conf_test=table(diab.glm_pred, lrtest$diabetes)
 conf_test
 misclass_test = (232-sum(diag(conf_test)))/232
 misclass_test
+cat("The misclassification error for the test data is", misclass_test)
 ```
 
-
-If one appiles this model to the test data one can find the proporsion of mistakes that are made, called the misclassification test error rate. The misclassification test error rate is thus
-$$Test\,\, error = \frac{29+18}{232} = 0.2025862. $$   
 
 
 Finding ROC-curve and AUC
@@ -469,9 +466,9 @@ The area under the ROC curve, hence the AUC, is calcualed to be 0.8451
 
 * one method from Module 8: Trees (and forests)
 
-We choose to use bagging to analyse the data. When using bagging one constucts bootstrap samples, and here we make $500$ samples. A classification tree is made from each sample, $\hat{f}^{*b}$. $b=1...B$, where $B$ s the number of bootstrap samples. Then one avareage over these predictions. Each of these classification trees will have high variance and low bias, but when we average over the trees, the variance decreases. When we use bagging, we assume that the observations are independent.     
+We choose to use bagging to analyse the data. When using bagging one constucts bootstrap samples, and here we make $500$ samples. A classification tree is made from each sample, $\hat{f}^{*b}$. $b=1...B$, where $B$ is the number of bootstrap samples. Then one avareage over these predictions. Each of these classification trees will have high variance and low bias, but when we average over the trees, the variance decreases. We assume that the observations are independent.     
 
-When using bagging instead of one simple classification tree, the variance is decreased, but this is on the cost of interpretability. When you average over multiple trees, you loose som of the interpretability that we find in classification trees. However it is possible to make varibale importance plots. Here the predictors are sorted based on their importance, where the more important predictors for either increase in MSE of node purity are placed further up than the less important ones. 
+When using bagging instead of one simple classification tree, the variance is decreased, but this is on the cost of interpretability. When you average over multiple trees, you loose some of the interpretability that we find in classification trees. However it is possible to make varibale importance plots. Here the predictors are sorted based on their importance, where the more important predictors for either increase in MSE of node purity are placed further up than the less important ones. 
 
 ```{r bagging}
 flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
@@ -485,7 +482,7 @@ plot(diab.bagging)
 summary(diab.bagging)
 
 ```
-Her må du skrive hva du får ut av denne mdoellen:
+
 The number of bootstrap samples, $B$, is chosen such that the error has stabilised, and is often chosen to $300$ or $500$. We se that the error is clearly stabilised at $B=500$, and choose that to be the number of bootstrap samples. 
 
 ```{r}
@@ -494,7 +491,6 @@ varImpPlot(diab.bagging)
 ```
 In the variance importance plot we see that `glu` is the most important covariate both when it comes to increase in MSE when assigning random variables instead of the covariate and in increase of the Gini index when using thw covariate. One can also see that `npreg` and `bp` are the least important variables. 
 
-Evaluation of the model:
 
 Misclassification rate for the test data
 ```{r}
@@ -503,8 +499,7 @@ diab.bag_pred=ifelse(diab.bag_prob>0.5, 1, 0)
 conf_test_bagging=table(diab.bag_pred, ctest$diabetes)
 conf_test_bagging
 misclass_test_bagging = (232-sum(diag(conf_test_bagging)))/232
-misclass_test_bagging 
-
+cat("The misclassification rate for the test data is", misclass_test_bagging)
 ```
 
 
@@ -520,31 +515,27 @@ The $AUC$ is $0.8288$.
 
 * one method from Module 9: Support vector machines
 
-We choose the support vector machines method, with a radial kernel, the cost of violating the margin = 10, and $\gamma$ = 0.001. The radial kernel is chosen because it is efficient and helps avoid overfitting of the data. The radial kernel is defined as 
-$$ K(\textbf{x}_i, \textbf{x}_i') = \text{exp}(- \gamma \sum_{j = 1}^{p}(x_{ij} - x_{i'j})^2)  $$ 
-where $\gamma$ is a tuning parameter and $p$ is the number of covariates. We find the optimal values for the margin violation cost and $\gamma$ by the function tune() in R. This results in a model where the width of the margin is 0.1, as seen from the summary of the selected model.  
+We choose the support vector machines method with a radial kernel. The radial kernel is chosen because it is efficient and helps avoid overfitting of the data. The radial kernel is defined as 
+$$ K(\textbf{x}_i, \textbf{x}_i') = \text{exp}(- \gamma \sum_{j = 1}^{p}(x_{ij} - x_{i'j})^2),  $$ 
+where $\gamma$ is a tuning parameter and $p$ is the number of covariates. We find the optimal values for the cost of violating the margin and $\gamma$ by the function tune() in R. This results in a model where the width of the margin is $0.1$, $\gamma=0.001$ and $\cost=5$ as seen from the summary of the selected model.  
  
-We notice that the model uses a quite large number of support vectors, 258 out of 300 possible. This could give us suspicions that the model is overfitted, but since the misclassification error is still rather low, it does not seem to be a substantial problem. ENDRE DETTE HVIS RESULTATET ENDRER SEG! 
+We notice that the model uses a quite large number of support vectors, 188 out of 300 possible. This could give us suspicions that the model is overfitted, but since the misclassification error is still rather low, it does not seem to be a substantial problem. 
  
 ```{r svm}
 flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
 ctrain=flying$ctrain
 ctest=flying$ctest
-
 svmtrain=ctrain
 svmtest=ctest
+
 library(e1071)
 set.seed(2)
-CV_radial = tune(svm, diabetes ~ ., data=ctrain, kernel="radial", ranges=list(gamma=c(10^-5, 10^-4,0.001,0.01,0.1,1,2,3,4,5), cost=c(0.001, 0.01, 0.1, 1, 5, 10, 20,40,80,100,120,140,160)))
-#summary(CV_radial)
-#best: gamma=0.001, cost=5
+CV_radial = tune(svm, factor(diabetes) ~ ., data=ctrain, kernel="radial", ranges=list(gamma=c(10^-5, 10^-4,0.001,0.01,0.1,1,2,3,4,5), cost=c(0.001, 0.01, 0.1, 1, 5, 10, 20,40,80,100,120,140,160)))
 svm_best_model=CV_radial$best.model
 summary(svm_best_model)
 
 #Finding miclassification rate for the test set:
-svm_prob_test=predict(svm_best_model, newdata=svmtest, type="response")
-summary(svm_prob_test)
-svm_pred_test=ifelse(svm_prob_test>0.5, 1, 0)
+svm_pred_test=predict(svm_best_model, newdata=svmtest, type="response")
 conf_test_svm=table(svm_pred_test, ctest$diabetes)
 conf_test_svm
 misclas_test_svm=(232-sum(diag(conf_test_svm)))/232
@@ -557,7 +548,7 @@ svm_ROC
 
 
 * one method from Module 11: Neural networks
-We now use a machine learning technique based on neural networks. Because the application is classification with only two classes we use a network with only one output node. The input layer consists of one node for each covariate which gives an input layer with a total of 7 nodes. We use a method in R called `nnet` which uses one hidden layer where the number of hidden nodes can be varied to fit our problem. To see what works best in our case we will use cross validation to find the best choice for this tuning parameter. 
+We now use a machine learning technique based on neural networks. Because the application is classification with only two classes we use a network with only one output node. The input layer consists of one node for each covariate which gives an input layer with a total of 7 nodes. We use a method in R called `nnet` which uses one hidden layer where the number of hidden nodes can be varied to fit our problem. To see what works best in our case, we will use cross validation to find the best choice for this tuning parameter. 
 
 ```{r neural networks}
 #loading again because the data has to be unchanged
@@ -584,13 +575,11 @@ library(pROC)
 
 #Cross validation to find best size of hidden layer
 set.seed(2)
-
 cv_nn = tune(nnet, diabetes ~ ., data=nn_train.df, ranges=list(size=1:10), linout=FALSE, entropy=TRUE)
-
 nn_best_model=cv_nn$best.model
 
 nn_prob_test=predict(nn_best_model, newdata=nn_test) #jeg får ikke til , type="response"
-nn_prob_test
+#nn_prob_test
 summary(nn_prob_test)
 nn_pred_test=ifelse(nn_prob_test>0.5, 1, 0)
 conf_test_nn=table(nn_pred_test, ctest$diabetes)
@@ -617,12 +606,4 @@ cat("AUC: Area under curve:", roc_curve$auc)
 
 ```
 The neural net that where trained to solve the problem worked over all very well. The misclassification rate where as good as in the earlier methods and it chose a small model with only one hidden node that also made it easier to understand the model. We also see from the ROC-curve and AUC that it looks good and preforms better than random guessing.
-
-For each method you 
-
-* clearly write out the model and model assumptions for the method
-* explain how any tuning parameters are chosen or model selection is performed
-* report (any) insight into the interpretation of the fitted model
-* evaluate the model using the test data, and report misclassifiation rate (cut-off 0.5 on probability) and plot ROC-curves and give the AUC (for method where class probabilities are given).
-
 **Q30:** Conclude with choosing a winning method, and explain why you mean that this is the winning method.
