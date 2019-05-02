@@ -524,32 +524,28 @@ The $AUC$ is $0.8288$.
 
 * one method from Module 9: Support vector machines
 
-We choose the support vector machines method, with a radial kernel, the cost of violating the margin = 10, and $\gamma$ = 0.001. The radial kernel is chosen because it is efficient and helps avoid overfitting of the data. The radial kernel is defined as 
-$$ K(\textbf{x}_i, \textbf{x}_i') = \text{exp}(- \gamma \sum_{j = 1}^{p}(x_{ij} - x_{i'j})^2)  $$ 
-where $\gamma$ is a tuning parameter and $p$ is the number of covariates. We find the optimal values for the margin violation cost and $\gamma$ by the function tune() in R. This results in a model where the width of the margin is 0.1, as seen from the summary of the selected model.  
+We choose the support vector machines method, with a radial kernel, the cost of violating the margin $= 10$, and $\gamma = 0.001$. The radial kernel is chosen because it is efficient and helps avoid overfitting of the data. The radial kernel is defined as 
+$$ K(\textbf{x}_i, \textbf{x}_i') = \text{exp}(- \gamma \sum_{j = 1}^{p}(x_{ij} - x_{i'j})^2),  $$ 
+where $\gamma$ is a tuning parameter and $p$ is the number of covariates. We find the optimal values for the cost of violating the margin and $\gamma$ by the function tune() in R. This results in a model where the width of the margin is $0.1$, as seen from the summary of the selected model.  
  
-We notice that the model uses a quite large number of support vectors, 258 out of 300 possible. This could give us suspicions that the model is overfitted, but since the misclassification error is still rather low, it does not seem to be a substantial problem. ENDRE DETTE HVIS RESULTATET ENDRER SEG! 
+We notice that the model uses a quite large number of support vectors, 188 out of 300 possible. This could give us suspicions that the model is overfitted, but since the misclassification error is still rather low, it does not seem to be a substantial problem. 
  
 ```{r svm}
 flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
 ctrain=flying$ctrain
 ctest=flying$ctest
-
 svmtrain=ctrain
 svmtest=ctest
+
 library(e1071)
 set.seed(2)
 CV_radial = tune(svm, factor(diabetes) ~ ., data=ctrain, kernel="radial", ranges=list(gamma=c(10^-5, 10^-4,0.001,0.01,0.1,1,2,3,4,5), cost=c(0.001, 0.01, 0.1, 1, 5, 10, 20,40,80,100,120,140,160)))
-#summary(CV_radial)
-#best: gamma=0.001, cost=5
 svm_best_model=CV_radial$best.model
 summary(svm_best_model)
 
 #Finding miclassification rate for the test set:
-svm_prob_test=predict(svm_best_model, newdata=svmtest, type="response")
-summary(svm_prob_test)
-#svm_pred_test=ifelse(svm_prob_test>0.5, 1, 0)
-conf_test_svm=table(svm_prob_test, ctest$diabetes)
+svm_pred_test=predict(svm_best_model, newdata=svmtest, type="response")
+conf_test_svm=table(svm_pred_test, ctest$diabetes)
 conf_test_svm
 misclas_test_svm=(232-sum(diag(conf_test_svm)))/232
 cat("Misclassification rate for the test data:", misclas_test_svm)
