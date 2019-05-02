@@ -539,9 +539,6 @@ conf_test_svm
 misclas_test_svm=(232-sum(diag(conf_test_svm)))/232
 cat("Misclassification rate for the test data:", misclas_test_svm)
 
-par(pty='s')
-svm_ROC=roc(ctest[ ,1], svm_prob_test, plot=TRUE, legacy.axes=TRUE)
-svm_ROC
 ```
 
 
@@ -608,9 +605,12 @@ The neural net that where trained to solve the problem worked over all very well
 We now compare the MSEs of the different methods to see which is the preferable. 
 
 ```{r}
+library(utils)
+library(pracma)
+
 mses=c(misclass_test, misclass_test_bagging, misclas_test_svm, misclas_test_nn)
 names=c("Logistic regression", "Bagging", "Support vector machine", "Neural network")
-mis_class_range = linspace(0,0.4,101) #Endre denne?
+mis_class_range = linspace(0,0.4,101)
 plot(mses, axes=FALSE, xlab = 'Methods', ylab = 'Misclassification rate')
 axis(1, at=1:4, lab=names)
 axis(2,mis_class_range)
@@ -621,6 +621,20 @@ for (i in c(1,2,3,4)){
   print(paste(names[i], sep = ": ", round(mses[i], 4)))
 }
 ```
-We see that the logistic regression has the lowest misclassification rate, which is a good indication that this is the best method for our problem. 
+We see that the logistic regression has the lowest misclassification rate, which is a good indication that this is the best method for our problem. We can also compare the AUCs for the methods where this can be found. 
 
+```{r}
+library(utils)
+library(pracma)
+
+aucs = c(glm_ROC$auc, bagging_ROC$auc, roc_curve$auc)
+aucnames = c("Logistic regression", "Bagging", "Neural network")
+
+print("The AUCs: ")
+for (i in c(1,2,3)){
+  print(paste(aucnames[i], sep = ": ", round(aucs[i], 3)))
+}
+```
+All methods have a relatively high AUC, which shows that they all work relatively well. We see that bagging has a slightly lower AUC values than logistic regression and the neural network, whihc indicates that the two latter are preferrable. 
+It is then natural to conclude that logisic regression is the best option for our data, since it scores well on both misclassification rate and AUC. 
 
