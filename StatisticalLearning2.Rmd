@@ -552,7 +552,7 @@ svmtrain=ctrain
 svmtest=ctest
 library(e1071)
 set.seed(2)
-CV_radial = tune(svm, diabetes ~ ., data=ctrain, kernel="radial", ranges=list(gamma=c(10^-5, 10^-4,0.001,0.01,0.1,1,2,3,4,5), cost=c(0.001, 0.01, 0.1, 1, 5, 10, 20,40,80,100,120,140,160)))
+CV_radial = tune(svm, factor(diabetes) ~ ., data=ctrain, kernel="radial", ranges=list(gamma=c(10^-5, 10^-4,0.001,0.01,0.1,1,2,3,4,5), cost=c(0.001, 0.01, 0.1, 1, 5, 10, 20,40,80,100,120,140,160)))
 #summary(CV_radial)
 #best: gamma=0.001, cost=5
 svm_best_model=CV_radial$best.model
@@ -561,8 +561,8 @@ summary(svm_best_model)
 #Finding miclassification rate for the test set:
 svm_prob_test=predict(svm_best_model, newdata=svmtest, type="response")
 summary(svm_prob_test)
-svm_pred_test=ifelse(svm_prob_test>0.5, 1, 0)
-conf_test_svm=table(svm_pred_test, ctest$diabetes)
+#svm_pred_test=ifelse(svm_prob_test>0.5, 1, 0)
+conf_test_svm=table(svm_prob_test, ctest$diabetes)
 conf_test_svm
 misclas_test_svm=(232-sum(diag(conf_test_svm)))/232
 cat("Misclassification rate for the test data:", misclas_test_svm)
