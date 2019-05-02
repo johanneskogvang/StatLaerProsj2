@@ -207,11 +207,8 @@ When constructing a regression tree one uses the top-down implementation with th
 
 **Q12:** A regression tree will be a suitable method for both numerical and categorical covariates; it is when the response is categorical one should use a classification three instead. A regression tree can be used in most cases where normal linear regression can also be used, and it has the benefits that it is easier to interpret and that it can be simplified using bagging and boosting, etc. It can also be added that when constructing a regression tree with numerical covariates, one should choose the splits according to what produces the lowest MSE. 
 
-A regression tree will be a suitable method for both numerical and categorical covariates; it is when the response is categorical one should use a classification three instead. A regression tree can be used in most cses where normal linear regression can also be used, and it has the benefits that it is easier to interpret and that it can be simplified using bagging and boosting, etc. It can also be added that when constructing a regression tree with numerical covariates, one should choose the splits according to what produces the lowest MSE. 
 
-**Q13:** Fit a (full) regression tree to the diamond data with `logprice` as the response (and the same covariates as for c and d), and plot the result. Comment briefly on you findings. 
-
-From the drawing of the regression tree below, we see that it only sorts on the lenght and width of the diamond, which should indicate that these are the most important covariates when classifying the price of the diamond. However, the best subset selection method for instance indicates that many more of the parameters is more or equally significant to the lenght and that the width is in fact statistically insignificant. This means that we can expect some errors when prediciting with this model. 
+**Q13:** We have fitted a regression tree to the diamond data with `logprice` as the response below. From the drawing of the regression tree, we see that it only sorts on the lenght and width of the diamond, which should indicate that these are the most important covariates when classifying the price of the diamond. However, the best subset selection method for instance indicates that many more of the parameters is more or equally significant to the lenght and that the width is in fact statistically insignificant. This means that we can expect some errors when prediciting with this model. 
 
 ```{r}
 library(tree)
@@ -225,10 +222,10 @@ text(tree.logprice, pretty=1)
 ```{r}
 tree_pred = predict(tree.logprice, newdata=dtest)
 mse_tree=mean((tree_pred - dtest$logprice)^2)
-mse_tree
+cat("The MSE of the regression tree is", mse_tree)
 
 ```
-The MSE of the regression tree is $0.01715548$.
+
 
 
 **Q15:**  When we average over different observations, the variance is typically lower than for one single observation. One can use the bootstrap to find $B$ repeated samples from the training data set, train each of the $B$ sets, and then average on the trained models. This is called bootstrap aggregation, or bagging, and will reduce the variance of the model. 
@@ -422,7 +419,7 @@ $$ p(x_i)= p_i = \frac{e^{{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\b
 One can also write this as 
 $$ log \frac{p_i}{1-p_i} = {{\beta}_{intercept} + {\beta}_{npreg}x_{npreg,i} + {\beta}_{glu}x_{glu,i} + {\beta}_{bp}x_{bp,i} + {\beta}_{skin}x_{skin,i} + {\beta}_{bmi}x_{bmi,i} + {\beta}_{ped}x_{ped,i} + {\beta}_{age}x_{age,i}}.$$
 
-These coefficients are found using maximun likelihood estimation. In logistic regression we assume that the observations to be independent of each other, and the variables should not be to highly correlated with each other. As seen when plotting the variables with each other, one can observe some mutlicollinearity between `skin` and `bmi` as well as between `npreg` and `age`. The log-odds is the left side of the last equation. We require little or no linearity between the log-odds and the independent variables, and we also assume that we have a large sample size.    
+These coefficients are found using maximun likelihood estimation. In logistic regression we assume that the observations are independent of each other, and the variables should not either be to highly correlated. As seen when plotting the variables with each other, one can observe some mutlicollinearity between `skin` and `bmi` as well as between `npreg` and `age`. The log-odds is the left side of the last equation. We require little or no linearity between the log-odds and the independent variables, and we also assume that we have a large sample size.    
 
 Fitting the model:
 ```{r logistic regression}
@@ -433,11 +430,10 @@ diab.glm = glm(diabetes ~ ., data = ctrain, family = "binomial")
 summary(diab.glm)
 ```
 
-If we look at the summary of the model, we see that there are three significate covariates woth p-value less than $0.05$. These are `glu`, `bmi` and `ped`, which in fact all have p-values less than $0.01$. The covariates `bp` and `skin` have rather high p-values, which means that they may not be that important in the model. 
+If we look at the summary of the model, we see that there are three significate covariates with p-value less than $0.05$. These are `glu`, `bmi` and `ped`, which in fact all have p-values less than $0.01$. The covariates `bp` and `skin` have rather high p-values, which means that they may not be that important in the model. 
 
 
-
-Evaluation of the model:
+If one appiles this model to the test data one can find the proporsion of mistakes that are made, called the misclassification test error rate.
 ```{r log reg eval}
 diab.glm_prob=predict(diab.glm, newdata=lrtest, type="response")
 diab.glm_pred=ifelse(diab.glm_prob > 0.5, 1, 0)
@@ -445,11 +441,9 @@ conf_test=table(diab.glm_pred, lrtest$diabetes)
 conf_test
 misclass_test = (232-sum(diag(conf_test)))/232
 misclass_test
+cat("The misclassification error for the test data is", misclass_test)
 ```
 
-
-If one appiles this model to the test data one can find the proporsion of mistakes that are made, called the misclassification test error rate. The misclassification test error rate is thus
-$$Test\,\, error = \frac{29+18}{232} = 0.2025862. $$   
 
 
 Finding ROC-curve and AUC
@@ -470,9 +464,9 @@ The area under the ROC curve, hence the AUC, is calcualed to be 0.8451
 
 * one method from Module 8: Trees (and forests)
 
-We choose to use bagging to analyse the data. When using bagging one constucts bootstrap samples, and here we make $500$ samples. A classification tree is made from each sample, $\hat{f}^{*b}$. $b=1...B$, where $B$ s the number of bootstrap samples. Then one avareage over these predictions. Each of these classification trees will have high variance and low bias, but when we average over the trees, the variance decreases. When we use bagging, we assume that the observations are independent.     
+We choose to use bagging to analyse the data. When using bagging one constucts bootstrap samples, and here we make $500$ samples. A classification tree is made from each sample, $\hat{f}^{*b}$. $b=1...B$, where $B$ is the number of bootstrap samples. Then one avareage over these predictions. Each of these classification trees will have high variance and low bias, but when we average over the trees, the variance decreases. We assume that the observations are independent.     
 
-When using bagging instead of one simple classification tree, the variance is decreased, but this is on the cost of interpretability. When you average over multiple trees, you loose som of the interpretability that we find in classification trees. However it is possible to make varibale importance plots. Here the predictors are sorted based on their importance, where the more important predictors for either increase in MSE of node purity are placed further up than the less important ones. 
+When using bagging instead of one simple classification tree, the variance is decreased, but this is on the cost of interpretability. When you average over multiple trees, you loose some of the interpretability that we find in classification trees. However it is possible to make varibale importance plots. Here the predictors are sorted based on their importance, where the more important predictors for either increase in MSE of node purity are placed further up than the less important ones. 
 
 ```{r bagging}
 flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
@@ -486,7 +480,7 @@ plot(diab.bagging)
 summary(diab.bagging)
 
 ```
-Her må du skrive hva du får ut av denne mdoellen:
+
 The number of bootstrap samples, $B$, is chosen such that the error has stabilised, and is often chosen to $300$ or $500$. We se that the error is clearly stabilised at $B=500$, and choose that to be the number of bootstrap samples. 
 
 ```{r}
@@ -495,7 +489,6 @@ varImpPlot(diab.bagging)
 ```
 In the variance importance plot we see that `glu` is the most important covariate both when it comes to increase in MSE when assigning random variables instead of the covariate and in increase of the Gini index when using thw covariate. One can also see that `npreg` and `bp` are the least important variables. 
 
-Evaluation of the model:
 
 Misclassification rate for the test data
 ```{r}
@@ -504,8 +497,7 @@ diab.bag_pred=ifelse(diab.bag_prob>0.5, 1, 0)
 conf_test_bagging=table(diab.bag_pred, ctest$diabetes)
 conf_test_bagging
 misclass_test_bagging = (232-sum(diag(conf_test_bagging)))/232
-misclass_test_bagging 
-
+cat("The misclassification rate for the test data is", misclass_test_bagging)
 ```
 
 
@@ -521,9 +513,9 @@ The $AUC$ is $0.8288$.
 
 * one method from Module 9: Support vector machines
 
-We choose the support vector machines method, with a radial kernel, the cost of violating the margin $= 10$, and $\gamma = 0.001$. The radial kernel is chosen because it is efficient and helps avoid overfitting of the data. The radial kernel is defined as 
+We choose the support vector machines method with a radial kernel. The radial kernel is chosen because it is efficient and helps avoid overfitting of the data. The radial kernel is defined as 
 $$ K(\textbf{x}_i, \textbf{x}_i') = \text{exp}(- \gamma \sum_{j = 1}^{p}(x_{ij} - x_{i'j})^2),  $$ 
-where $\gamma$ is a tuning parameter and $p$ is the number of covariates. We find the optimal values for the cost of violating the margin and $\gamma$ by the function tune() in R. This results in a model where the width of the margin is $0.1$, as seen from the summary of the selected model.  
+where $\gamma$ is a tuning parameter and $p$ is the number of covariates. We find the optimal values for the cost of violating the margin and $\gamma$ by the function tune() in R. This results in a model where the width of the margin is $0.1$, $\gamma=0.001$ and $\cost=5$ as seen from the summary of the selected model.  
  
 We notice that the model uses a quite large number of support vectors, 188 out of 300 possible. This could give us suspicions that the model is overfitted, but since the misclassification error is still rather low, it does not seem to be a substantial problem. 
  
@@ -550,7 +542,7 @@ cat("Misclassification rate for the test data:", misclas_test_svm)
 
 
 * one method from Module 11: Neural networks
-We now use a machine learning technique based on neural networks. Because the application is classification with only two classes we use a network with only one output node. The input layer consists of one node for each covariate which gives an input layer with a total of 7 nodes. We use a method in R called `nnet` which uses one hidden layer where the number of hidden nodes can be varied to fit our problem. To see what works best in our case we will use cross validation to find the best choice for this tuning parameter. 
+We now use a machine learning technique based on neural networks. Because the application is classification with only two classes we use a network with only one output node. The input layer consists of one node for each covariate which gives an input layer with a total of 7 nodes. We use a method in R called `nnet` which uses one hidden layer where the number of hidden nodes can be varied to fit our problem. To see what works best in our case, we will use cross validation to find the best choice for this tuning parameter. 
 
 ```{r neural networks}
 #loading again because the data has to be unchanged
@@ -577,13 +569,11 @@ library(pROC)
 
 #Cross validation to find best size of hidden layer
 set.seed(2)
-
 cv_nn = tune(nnet, diabetes ~ ., data=nn_train.df, ranges=list(size=1:10), linout=FALSE, entropy=TRUE)
-
 nn_best_model=cv_nn$best.model
 
 nn_prob_test=predict(nn_best_model, newdata=nn_test) #jeg får ikke til , type="response"
-nn_prob_test
+#nn_prob_test
 summary(nn_prob_test)
 nn_pred_test=ifelse(nn_prob_test>0.5, 1, 0)
 conf_test_nn=table(nn_pred_test, ctest$diabetes)
@@ -597,12 +587,5 @@ ggroc(roc_curve) + ggtitle("ROC curve for neural network model")
 
 ```
 
-
-For each method you 
-
-* clearly write out the model and model assumptions for the method
-* explain how any tuning parameters are chosen or model selection is performed
-* report (any) insight into the interpretation of the fitted model
-* evaluate the model using the test data, and report misclassifiation rate (cut-off 0.5 on probability) and plot ROC-curves and give the AUC (for method where class probabilities are given).
 
 **Q30:** Conclude with choosing a winning method, and explain why you mean that this is the winning method.
