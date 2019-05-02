@@ -100,9 +100,9 @@ From both the plot with `carat` and `logcarat` we observe a clear indication tha
 
 The relation between `logprice`and `clarity` is less apparent. Looking at the medians and the mid 50 percentiles, is seems as though the price decreses with better clarity, which is counterintuitive. We do however, observe that many outliers in the most extreme observations, and that the whiskers for most of the clarities cover mostly the entire price range. This indicates that the clarity has little influence on the diamond price. 
 
-Some of the same is observable in the plot between `cut` and `logprice`, where the whiskersof the boxplots covers most of the price range for all cuts. 
+Some of the same is observable in the plot between `cut` and `logprice`, where the whiskers of the boxplots covers most of the price range for all cuts. 
 
-Use the local regression model $\texttt{logprice} = \beta_0 + \beta_1 \texttt{carat}+ \beta_2 \texttt{carat}^2$ weighted by the tricube kernel $K_{i0}$. 
+We now use the local regression model $\texttt{logprice} = \beta_0 + \beta_1 \texttt{carat}+ \beta_2 \texttt{carat}^2$ weighted by the tricube kernel $K_{i0}$. 
 
 **Q2:** What is the predicted price of a diamond weighting 1 carat. Use the closest 20% of the observations.  
 ```{r message=FALSE, warning=FALSE}
@@ -553,7 +553,6 @@ conf_test_svm=table(svm_prob_test, ctest$diabetes)
 conf_test_svm
 misclas_test_svm=(232-sum(diag(conf_test_svm)))/232
 cat("Misclassification rate for the test data:", misclas_test_svm)
-
 ```
 
 
