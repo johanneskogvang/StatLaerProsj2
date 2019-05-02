@@ -207,11 +207,8 @@ When constructing a regression tree one uses the top-down implementation with th
 
 **Q12:** A regression tree will be a suitable method for both numerical and categorical covariates; it is when the response is categorical one should use a classification three instead. A regression tree can be used in most cases where normal linear regression can also be used, and it has the benefits that it is easier to interpret and that it can be simplified using bagging and boosting, etc. It can also be added that when constructing a regression tree with numerical covariates, one should choose the splits according to what produces the lowest MSE. 
 
-A regression tree will be a suitable method for both numerical and categorical covariates; it is when the response is categorical one should use a classification three instead. A regression tree can be used in most cses where normal linear regression can also be used, and it has the benefits that it is easier to interpret and that it can be simplified using bagging and boosting, etc. It can also be added that when constructing a regression tree with numerical covariates, one should choose the splits according to what produces the lowest MSE. 
 
-**Q13:** Fit a (full) regression tree to the diamond data with `logprice` as the response (and the same covariates as for c and d), and plot the result. Comment briefly on you findings. 
-
-From the drawing of the regression tree below, we see that it only sorts on the lenght and width of the diamond, which should indicate that these are the most important covariates when classifying the price of the diamond. However, the best subset selection method for instance indicates that many more of the parameters is more or equally significant to the lenght and that the width is in fact statistically insignificant. This means that we can expect some errors when prediciting with this model. 
+**Q13:** We have fitted a regression tree to the diamond data with `logprice` as the response below. From the drawing of the regression tree, we see that it only sorts on the lenght and width of the diamond, which should indicate that these are the most important covariates when classifying the price of the diamond. However, the best subset selection method for instance indicates that many more of the parameters is more or equally significant to the lenght and that the width is in fact statistically insignificant. This means that we can expect some errors when prediciting with this model. 
 
 ```{r}
 library(tree)
@@ -225,10 +222,10 @@ text(tree.logprice, pretty=1)
 ```{r}
 tree_pred = predict(tree.logprice, newdata=dtest)
 mse_tree=mean((tree_pred - dtest$logprice)^2)
-mse_tree
+cat("The MSE of the regression tree is", mse_tree)
 
 ```
-The MSE of the regression tree is $0.01715548$.
+
 
 
 **Q15:**  When we average over different observations, the variance is typically lower than for one single observation. One can use the bootstrap to find $B$ repeated samples from the training data set, train each of the $B$ sets, and then average on the trained models. This is called bootstrap aggregation, or bagging, and will reduce the variance of the model. 
