@@ -4,8 +4,8 @@ title: "Compulsory exercise 2: Group 14"
 author: "Helene Behrens, Ellisiv Steen and Johanne Skogvang"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
-  html_document
-  #pdf_document
+  #html_document
+  pdf_document
 ---
   
 ```{r setup, include=FALSE}
@@ -112,8 +112,8 @@ fit = loess(logprice ~ carat, data=dtrain, span=.2 )
 
 ```
 
-**Q3:** What choice of $\beta_1$, $\beta_2$ and $K_{i0}$ would result in KNN-regression?  
-In local regression we have $\hat{f}=\beta_0+\beta_1 x_i+\beta_2x_i^2$, while for KNN-regression this $\hat{f}$ is konstant equal to the mean of the observations in the neighbourhood. Hence, for this to be the KNN-regression we have $ \beta_1 = \beta_2 = 0$. Also, we want $K_{i0}$ equal to one for the observations in the neighbourhood, and zero for the ones outside. 
+**Q3:** 
+In local regression we have $\hat{f}=\beta_0+\beta_1 x_i+\beta_2x_i^2$, while for KNN-regression this $\hat{f}$ is konstant equal to the mean of the observations in the neighbourhood. Hence, for local regression to be equal to KNN-regression we have $\beta_1 = \beta_2 = 0$. Also, we want $K_{i0}$ equal to one for the observations in the neighbourhood, and zero for the ones outside. 
 
 **Q4:** Describe how you can perform model selection in regression with AIC as criterion.  
 When we perform model selection in regression with AIC as the criterion, we perform a best subset selcetion, and choose the set of covariates that produce the lowest AIC value. 
@@ -581,7 +581,7 @@ library(pROC)
 #Cross validation to find best size of hidden layer
 set.seed(2)
 
-cv_nn = tune(nnet, diabetes ~ ., data=nn_train.df, ranges=list(size=1:40))
+cv_nn = tune(nnet, diabetes ~ ., data=nn_train.df, ranges=list(size=1:10), linout=FALSE, entropy=TRUE)
 
 nn_best_model=cv_nn$best.model
 
